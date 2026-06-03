@@ -1,15 +1,19 @@
 <!DOCTYPE html>
 <html lang="it">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Catalogo film e serie TV con ricerca TMDB, login demo e player fullscreen configurabile.">
+  <meta name="description"
+    content="Catalogo film e serie TV con ricerca TMDB, login demo e player fullscreen configurabile.">
   <title>StreamingCommunity — Film e Serie</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="/stream/styles.css">
 </head>
+
 <body>
   <header class="navbar" id="navbar">
     <div class="navbar-inner">
@@ -28,10 +32,16 @@
       <div class="navbar-right">
         <div class="search-shell" id="search-shell">
           <button class="search-icon-btn" id="search-toggle" aria-label="Apri ricerca">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
           </button>
           <div class="search-box" id="search-box">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.35-4.35" />
+            </svg>
             <input id="search-input" type="search" placeholder="Cerca film o serie" autocomplete="off">
             <button id="search-close" aria-label="Chiudi ricerca">×</button>
           </div>
@@ -56,7 +66,8 @@
 
   <main class="main" id="main">
     <section class="setup-banner hidden" id="setup-banner">
-      <b>TMDB non configurato.</b> Inserisci la tua API key in <code>app.js</code> oppure esegui in console: <code>localStorage.setItem('tmdb_api_key','LA_TUA_KEY')</code>
+      <b>TMDB non configurato.</b> Inserisci la tua API key in <code>app.js</code> oppure esegui in console:
+      <code>localStorage.setItem('tmdb_api_key','LA_TUA_KEY')</code>
     </section>
 
     <section class="page page-home active" id="page-home">
@@ -73,11 +84,17 @@
           <div class="hero-meta" id="hero-meta"></div>
           <div class="hero-actions">
             <button class="btn-play" id="hero-play">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                <path d="M8 5v14l11-7z" />
+              </svg>
               Riproduci
             </button>
             <button class="btn-info" id="hero-info">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 16v-4" />
+                <path d="M12 8h.01" />
+              </svg>
               Altre info
             </button>
           </div>
@@ -97,24 +114,49 @@
 
       <section class="rows" id="rows">
         <section class="slider-section">
-          <div class="slider-header"><h2>I titoli del momento</h2><button class="slider-browse" data-page="archive">Sfoglia tutti</button></div>
-          <div class="slider-wrapper"><button class="slider-arrow left" aria-label="Precedente">‹</button><div class="slider-track" id="row-trending"></div><button class="slider-arrow right" aria-label="Successivo">›</button></div>
+          <div class="slider-header">
+            <h2>I titoli del momento</h2><button class="slider-browse" data-page="archive">Sfoglia tutti</button>
+          </div>
+          <div class="slider-wrapper"><button class="slider-arrow left" aria-label="Precedente">‹</button>
+            <div class="slider-track" id="row-trending"></div><button class="slider-arrow right"
+              aria-label="Successivo">›</button>
+          </div>
         </section>
         <section class="slider-section">
-          <div class="slider-header"><h2>Film popolari</h2><button class="slider-browse" data-page="movies">Sfoglia tutti</button></div>
-          <div class="slider-wrapper"><button class="slider-arrow left" aria-label="Precedente">‹</button><div class="slider-track" id="row-movies"></div><button class="slider-arrow right" aria-label="Successivo">›</button></div>
+          <div class="slider-header">
+            <h2>Film popolari</h2><button class="slider-browse" data-page="movies">Sfoglia tutti</button>
+          </div>
+          <div class="slider-wrapper"><button class="slider-arrow left" aria-label="Precedente">‹</button>
+            <div class="slider-track" id="row-movies"></div><button class="slider-arrow right"
+              aria-label="Successivo">›</button>
+          </div>
         </section>
         <section class="slider-section">
-          <div class="slider-header"><h2>Serie TV popolari</h2><button class="slider-browse" data-page="shows">Sfoglia tutti</button></div>
-          <div class="slider-wrapper"><button class="slider-arrow left" aria-label="Precedente">‹</button><div class="slider-track" id="row-shows"></div><button class="slider-arrow right" aria-label="Successivo">›</button></div>
+          <div class="slider-header">
+            <h2>Serie TV popolari</h2><button class="slider-browse" data-page="shows">Sfoglia tutti</button>
+          </div>
+          <div class="slider-wrapper"><button class="slider-arrow left" aria-label="Precedente">‹</button>
+            <div class="slider-track" id="row-shows"></div><button class="slider-arrow right"
+              aria-label="Successivo">›</button>
+          </div>
         </section>
         <section class="slider-section">
-          <div class="slider-header"><h2>Top 10</h2><button class="slider-browse" data-page="archive">Sfoglia tutti</button></div>
-          <div class="slider-wrapper"><button class="slider-arrow left" aria-label="Precedente">‹</button><div class="slider-track top10" id="row-top10"></div><button class="slider-arrow right" aria-label="Successivo">›</button></div>
+          <div class="slider-header">
+            <h2>Top 10</h2><button class="slider-browse" data-page="archive">Sfoglia tutti</button>
+          </div>
+          <div class="slider-wrapper"><button class="slider-arrow left" aria-label="Precedente">‹</button>
+            <div class="slider-track top10" id="row-top10"></div><button class="slider-arrow right"
+              aria-label="Successivo">›</button>
+          </div>
         </section>
         <section class="slider-section">
-          <div class="slider-header"><h2>Nuove uscite film</h2><button class="slider-browse" data-page="movies">Sfoglia tutti</button></div>
-          <div class="slider-wrapper"><button class="slider-arrow left" aria-label="Precedente">‹</button><div class="slider-track" id="row-new-movies"></div><button class="slider-arrow right" aria-label="Successivo">›</button></div>
+          <div class="slider-header">
+            <h2>Nuove uscite film</h2><button class="slider-browse" data-page="movies">Sfoglia tutti</button>
+          </div>
+          <div class="slider-wrapper"><button class="slider-arrow left" aria-label="Precedente">‹</button>
+            <div class="slider-track" id="row-new-movies"></div><button class="slider-arrow right"
+              aria-label="Successivo">›</button>
+          </div>
         </section>
       </section>
     </section>
@@ -159,7 +201,9 @@
             <div class="detail-genres" id="detail-genres"></div>
             <div class="detail-actions">
               <button class="btn-play" id="detail-play">
-                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
                 Riproduci
               </button>
               <button class="btn-info" id="detail-list">+ La mia lista</button>
@@ -180,8 +224,13 @@
       </section>
 
       <section class="slider-section related-section">
-        <div class="slider-header"><h2>Simili</h2></div>
-        <div class="slider-wrapper"><button class="slider-arrow left" aria-label="Precedente">‹</button><div class="slider-track" id="row-related"></div><button class="slider-arrow right" aria-label="Successivo">›</button></div>
+        <div class="slider-header">
+          <h2>Simili</h2>
+        </div>
+        <div class="slider-wrapper"><button class="slider-arrow left" aria-label="Precedente">‹</button>
+          <div class="slider-track" id="row-related"></div><button class="slider-arrow right"
+            aria-label="Successivo">›</button>
+        </div>
       </section>
     </section>
   </main>
@@ -190,7 +239,8 @@
     <div class="player-area" id="player-area"></div>
     <button class="player-back" id="player-close" aria-label="Chiudi player">←</button>
     <div class="player-bottom" id="player-bottom">
-      <input class="player-progress" id="player-progress" type="range" min="0" max="100" value="0" step="0.1" aria-label="Avanzamento">
+      <input class="player-progress" id="player-progress" type="range" min="0" max="100" value="0" step="0.1"
+        aria-label="Avanzamento">
       <div class="player-controls">
         <button id="p-play" aria-label="Play/Pausa">⏸</button>
         <button id="p-back10" aria-label="Indietro 10 secondi">↺10</button>
@@ -225,7 +275,8 @@
         </div>
         <div class="form-group">
           <label>Password</label>
-          <input type="password" id="auth-password" autocomplete="current-password" placeholder="Minimo 6 caratteri" required>
+          <input type="password" id="auth-password" autocomplete="current-password" placeholder="Minimo 6 caratteri"
+            required>
         </div>
         <div class="form-group register-only hidden">
           <label>Conferma password</label>
@@ -240,4 +291,5 @@
   <div class="toast" id="toast"></div>
   <script type="module" src="/stream/app.js"></script>
 </body>
+
 </html>
