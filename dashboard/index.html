@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<title>Admin Dashboard</title>
+<style>
+:root {
+  --bg:#141313;
+  --card:#201f1f;
+  --card2:#2b2a2a;
+  --inner:#151414;
+  --line:#ffffff14;
+  --txt:#e5e2e1;
+  --mut:#8e9192;
+  --pri:#c9c6c5;
+  --ok:#4ade80;
+  --warn:#facc15;
+  --err:#ffb4ab;
+  --red:#b00020;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--txt);font-family:Arial,system-ui,sans-serif}
+body{max-width:1280px;margin-inline:auto}
+button,input,select,textarea{font:inherit}
+.hidden{display:none!important}
+.mono{font-family:ui-monospace,Consolas,monospace}
+.small{font-size:12px;color:var(--mut);line-height:1.45}
+.login{min-height:100dvh;display:grid;place-items:center;padding:20px}
+.login-card,.card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px}
+.login-card{width:min(430px,100%);box-shadow:0 18px 60px #0008}
+.logo{font-family:ui-monospace,Consolas,monospace;color:var(--pri);font-weight:900;letter-spacing:.16em}
+h1,h2,h3{margin:0 0 12px}
+label{display:block;font-size:11px;color:var(--mut);font-family:ui-monospace,Consolas,monospace;letter-spacing:.08em;margin:12px 0 6px}
+input,select,textarea{width:100%;min-width:0;background:#0d0d0d;color:var(--txt);border:1px solid var(--line);border-radius:13px;padding:11px;outline:0}
+textarea{min-height:74px;resize:vertical}
+input:focus,select:focus,textarea:focus{border-color:var(--pri);box-shadow:0 0 0 3px #c9c6c51c}
+.btn{border:0;border-radius:13px;padding:11px 14px;background:var(--pri);color:#313030;font-weight:900;font-family:ui-monospace,Consolas,monospace;font-size:12px;letter-spacing:.08em;cursor:pointer;transition:transform .12s ease,filter .12s ease,background .12s ease}
+.btn:active{transform:scale(.96)}
+.btn.secondary{background:var(--card2);color:var(--txt);border:1px solid var(--line)}
+.btn.danger{background:var(--red);color:white}
+.btn.ok{background:var(--ok);color:#112016}
+.btn.warn{background:var(--warn);color:#181100}
+.btn.ghost{background:transparent;color:#c4c7c7;border:1px solid var(--line)}
+.top{position:sticky;top:0;z-index:20;background:rgba(20,19,19,.96);backdrop-filter:blur(18px);border-bottom:1px solid var(--line);padding:calc(env(safe-area-inset-top,0px) + 12px) 16px 14px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.toprow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px;background:#0d0d0d;border:1px solid var(--line);border-radius:18px;padding:8px;box-shadow:inset 0 0 0 1px #0008}
+.tabbtn{min-height:46px;white-space:nowrap;background:#ffffff08;color:#c4c7c7;border:1px solid var(--line);border-radius:14px;padding:10px 12px;font-family:ui-monospace,Consolas,monospace;font-size:12px;font-weight:900;letter-spacing:.06em;cursor:pointer;transition:transform .12s ease,background .12s ease,color .12s ease,border-color .12s ease}
+.tabbtn:active{transform:scale(.97)}
+.tabbtn.active{background:var(--pri);color:#313030;border-color:var(--pri);box-shadow:0 8px 24px #0007}
+.badge{display:inline-flex;align-items:center;gap:5px;font-family:ui-monospace,Consolas,monospace;font-size:11px;padding:5px 9px;border-radius:999px;background:#ffffff10;color:var(--mut);border:1px solid var(--line);white-space:nowrap}
+.badge.ok{background:#4ade801a;color:var(--ok);border-color:#4ade8040}
+.badge.warn{background:#facc151a;color:var(--warn);border-color:#facc1540}
+.badge.err{background:#ffb4ab1a;color:var(--err);border-color:#ffb4ab40}
+main{padding:16px;display:grid;gap:16px}
+.tab{display:none}
+.tab.active{display:grid;gap:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.stat{background:var(--card2);border:1px solid var(--line);border-radius:17px;padding:14px;min-width:0}
+.stat .k{font-family:ui-monospace,Consolas,monospace;font-size:11px;color:var(--mut);letter-spacing:.08em}
+.stat .v{font-size:22px;font-weight:900;margin-top:4px;overflow-wrap:anywhere}
+.filters-card{background:linear-gradient(180deg,#201f1f,#181717);border:1px solid var(--line);border-radius:22px;padding:18px}
+.tablewrap{overflow:auto;border-radius:16px;border:1px solid var(--line)}
+table{width:100%;border-collapse:collapse;min-width:850px;background:#151414}
+th,td{padding:10px;border-bottom:1px solid #ffffff0d;text-align:left;font-size:13px;vertical-align:top}
+th{background:#1c1b1b;color:var(--mut);font-family:ui-monospace,Consolas,monospace;font-size:11px;letter-spacing:.07em}
+tr:hover td{background:#ffffff05}
+.device{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start;background:#161515;border:1px solid var(--line);border-radius:17px;padding:13px;min-width:0}
+.device-title{font-weight:900;overflow-wrap:anywhere}
+.remote-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.rc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:14px;align-items:stretch}
+.param{background:#161515;border:1px solid var(--line);border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:12px;min-height:260px;min-width:0;overflow:hidden}
+.param-head{min-height:48px;min-width:0}
+.param-title{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--pri);font-weight:900;letter-spacing:.06em;overflow-wrap:anywhere}
+.param-desc{font-size:12px;color:var(--mut);margin-top:4px;line-height:1.35;overflow-wrap:anywhere}
+.fieldbox{background:#0d0d0d;border:1px solid var(--line);border-radius:16px;padding:10px;min-width:0;overflow:hidden}
+.fieldbox label{margin:0 0 7px}
+.param .btn{width:100%}
+.param-actions{margin-top:auto;display:grid;grid-template-columns:1fr;gap:8px}
+.add-card{background:#161515;border:1px solid var(--line);border-radius:20px;padding:14px}
+.toast{position:fixed;right:16px;bottom:16px;z-index:100;background:#0d0d0d;border:1px solid var(--line);border-radius:16px;padding:13px 14px;max-width:min(440px,calc(100vw - 32px));box-shadow:0 14px 50px #000a;color:#c4c7c7;white-space:pre-wrap}
+.modal{position:fixed;inset:0;z-index:90;background:#0009;backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:16px}
+.modal.open{display:flex}
+.modal-card{width:min(920px,100%);max-height:88dvh;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:24px;padding:16px}
+pre{white-space:pre-wrap;word-break:break-word;background:#0d0d0d;border:1px solid var(--line);border-radius:14px;padding:12px;color:#c4c7c7}
+@media(max-width:760px){
+  .tabs{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tabbtn{font-size:11px;min-height:44px}
+  .device{grid-template-columns:1fr}
+  table{min-width:760px}
+  th,td{font-size:12px;padding:8px}
+}
+@media(max-width:430px){
+  .tabs{gap:7px;padding:7px}
+  .tabbtn{padding:9px 8px}
+  .rc-grid{grid-template-columns:1fr}
+}
+
+.uploadbox{background:#161515;border:1px solid var(--line);border-radius:20px;padding:14px;display:grid;gap:12px}
+.progresswrap{height:13px;background:#0d0d0d;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.progressbar{height:100%;width:0%;background:var(--pri);transition:width .18s ease}
+
+</style>
+</head>
+<body>
+<section id="loginPage" class="login">
+  <div class="login-card">
+    <div class="logo">ADMIN DASHBOARD</div>
+    <h1>Accesso dashboard</h1>
+    <p class="small">Accedi con qualsiasi utente presente in Firebase Authentication.</p>
+    <label>Email</label><input id="email" type="email" autocomplete="username">
+    <label>Password</label><input id="pass" type="password" autocomplete="current-password">
+    <br><br><button id="loginBtn" class="btn" style="width:100%">ACCEDI</button>
+    <p class="small">Crea l'utente da Firebase Console → Authentication → Users.</p>
+  </div>
+</section>
+
+<section id="appPage" class="hidden">
+<header class="top">
+  <div class="toprow">
+    <div>
+      <div class="logo">ADMIN DASHBOARD</div>
+      <div class="small">/dashboard · Firestore · Remote Control</div>
+    </div>
+    <div class="row">
+      <span id="authEmail" class="badge ok">AUTH</span>
+      <span id="apiState" class="badge warn">API</span>
+      <button id="refreshBtn" class="btn secondary">AGGIORNA</button>
+      <button id="logoutBtn" class="btn ghost">ESCI</button>
+    </div>
+  </div>
+  <nav class="tabs">
+    <button class="tabbtn active" data-tab="overview">DASHBOARD</button>
+    <button class="tabbtn" data-tab="devices">DISPOSITIVI</button>
+    <button class="tabbtn" data-tab="users">UTENTI</button>
+    <button class="tabbtn" data-tab="remote">REMOTE CONTROL</button>
+  </nav>
+</header>
+
+<main>
+<section id="tab-overview" class="tab active">
+  <div class="stats-grid">
+    <div class="stat"><div class="k">DISPOSITIVI</div><div id="statDevices" class="v">—</div></div>
+    <div class="stat"><div class="k">BLOCCATI</div><div id="statBlocked" class="v">—</div></div>
+    <div class="stat"><div class="k">TOTALE OK</div><div id="statTotal" class="v">—</div></div>
+    <div class="stat"><div class="k">OK / NO</div><div id="statOps" class="v">—</div></div>
+    <div class="stat"><div class="k">MEDIA</div><div id="statAvg" class="v">—</div></div>
+    <div class="stat"><div class="k">ULTIMA</div><div id="statLast" class="v">—</div></div>
+  </div>
+
+  <div class="filters-card">
+    <h2>Storico transazioni</h2>
+    <div class="grid">
+      <div><label>Dispositivo</label><select id="txDevice"><option value="all">Tutti</option></select></div>
+      <div><label>Periodo</label><select id="txPeriod"><option value="today">Oggi dalle 00:00</option><option value="1">Ultimo giorno</option><option value="2">Ultimi 2 giorni</option><option value="3">Ultimi 3 giorni</option><option value="4">Ultimi 4 giorni</option><option value="5">Ultimi 5 giorni</option><option value="6">Ultimi 6 giorni</option><option value="7">1 settimana</option><option value="14">2 settimane</option><option value="21">3 settimane</option><option value="28">4 settimane</option><option value="30">1 mese</option><option value="60">2 mesi</option><option value="90">3 mesi</option><option value="all">Tutto</option></select></div>
+      <div><label>Stato</label><select id="txStatus"><option value="all">Tutti</option><option value="ok">Solo OK</option><option value="fail">Solo NO/errore</option></select></div>
+      <div><label>Cerca</label><input id="txSearch" placeholder="UID, vendor, operatore..."></div>
+    </div>
+    <br>
+    <div class="row"><button id="loadTx" class="btn secondary">CARICA</button><button id="exportCsv" class="btn secondary">CSV</button></div>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat"><div class="k">TOTALE FILTRATO</div><div id="txTotal" class="v">—</div></div>
+    <div class="stat"><div class="k">OK / NO FILTRATO</div><div id="txOps" class="v">—</div></div>
+    <div class="stat"><div class="k">MEDIA FILTRATA</div><div id="txAvg" class="v">—</div></div>
+  </div>
+
+  <div class="card"><h2>Transazioni</h2><div id="txTable" class="tablewrap"></div></div>
+
+  <div class="filters-card">
+    <h2>Log aggiornamenti app</h2>
+    <div class="grid">
+      <div><label>Stato update</label><select id="updateStatus"><option value="all">Tutti</option><option value="required">Obbligatorio</option><option value="available">Disponibile</option><option value="download">Download</option><option value="updated">Aggiornato</option><option value="not_updated">Non aggiornato</option><option value="failed">Errore</option></select></div>
+      <div><label>Cerca</label><input id="updateSearch" placeholder="operatore, phone_id, evento..."></div>
+    </div>
+    <br><div class="row"><button id="loadUpdateLogs" class="btn secondary">CARICA LOG UPDATE</button></div>
+  </div>
+  <div class="card"><h2>Feedback aggiornamenti</h2><div id="updateLogTable" class="tablewrap"></div></div>
+</section>
+
+<section id="tab-devices" class="tab">
+  <div class="filters-card">
+    <h2>Dispositivi</h2>
+    <div class="grid">
+      <div><label>Cerca</label><input id="deviceSearch" placeholder="phone_id, operatore, modello"></div>
+      <div><label>Stato</label><select id="deviceState"><option value="all">Tutti</option><option value="enabled">Abilitati</option><option value="blocked">Bloccati</option></select></div>
+    </div>
+  </div>
+  <div id="devicesList" class="grid"></div>
+</section>
+
+<section id="tab-users" class="tab">
+  <div class="card">
+    <h2>Utenti Authentication</h2>
+    <button id="loadUsers" class="btn secondary">CARICA UTENTI</button>
+  </div>
+  <div class="card"><div id="usersTable" class="tablewrap"></div></div>
+</section>
+
+<section id="tab-remote" class="tab">
+  <div class="card">
+    <h2>Remote Control</h2><p class="small" id="rcLoadedState">Remote Config non ancora caricato.</p>
+    <div class="remote-actions">
+      <button id="loadRc" class="btn secondary">CARICA CONFIG</button>
+      <button id="saveRc" class="btn">SALVA CONFIG</button>
+      <button class="btn secondary" onclick="presetSafe()">SAFE MODE</button>
+      <button class="btn danger" onclick="presetMaintenance()">MANUTENZIONE</button>
+      <button class="btn warn" onclick="presetWrite()">SCRITTURA REALE</button>
+      <button class="btn ok" onclick="presetNormal()">NORMALE</button>
+    </div>
+  </div>
+
+  <div class="uploadbox">
+    <h2>Carica APK</h2>
+    <p class="small">Carica solo il nuovo APK. Il file viene salvato nello storage privato e update_url viene aggiornato automaticamente, senza ripubblicare tutto il sito.</p>
+    <div class="grid">
+      <div><label>File APK</label><input id="apkFile" type="file" accept=".apk,application/vnd.android.package-archive"></div>
+      <div><label>VersionCode da scaricare</label><input id="apkVersionCode" type="number" min="1" placeholder="es. 45"></div>
+      <div><label>Versione minima richiesta</label><select id="apkMinMode"><option value="no">Non cambiare</option><option value="same">Uguale al versionCode</option></select></div>
+      <div><label>Force update</label><select id="apkForceMode"><option value="no">Non cambiare</option><option value="true">true</option><option value="false">false</option></select></div>
+    </div>
+    <div class="progresswrap"><div id="apkProgressBar" class="progressbar"></div></div>
+    <div id="apkProgressText" class="small mono">0%</div>
+    <div class="row">
+      <button id="uploadApkBtn" class="btn">CARICA APK E AGGIORNA REMOTE</button>
+    </div>
+  </div>
+
+
+  <div class="card">
+    <h2>Parametri</h2>
+    <div id="rcParams" class="rc-grid"></div>
+  </div>
+
+  <div class="add-card">
+    <h2>Aggiungi voce</h2>
+    <div class="grid">
+      <div><label>Chiave</label><input id="newRcKey" placeholder="update_url"></div>
+      <div><label>Tipo</label><select id="newRcType"><option>STRING</option><option>BOOLEAN</option><option>NUMBER</option><option>JSON</option></select></div>
+      <div><label>Valore</label><input id="newRcValue"></div>
+    </div>
+    <br><button class="btn secondary" onclick="addRcParam()">AGGIUNGI</button>
+  </div>
+</section>
+</main>
+</section>
+
+<div id="toast" class="toast hidden"></div>
+<div id="modal" class="modal"><div class="modal-card"><div class="row" style="justify-content:space-between"><h2 id="modalTitle">Dettaglio</h2><button class="btn secondary" onclick="closeModal()">CHIUDI</button></div><pre id="modalBody"></pre></div></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
+
+
+const firebaseConfig = {
+  apiKey: "AIzaSyArKnYMPmUMrn4QM_zHNBRn7zOXJWCZjrg",
+  authDomain: "mikai-remote-config.firebaseapp.com",
+  projectId: "mikai-remote-config",
+  storageBucket: "mikai-remote-config.firebasestorage.app",
+  messagingSenderId: "783025703581",
+  appId: "1:783025703581:web:3efdc63bb8ff44b9a4e274",
+  measurementId: "G-V242RH89NB"
+};
+
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const API = "/.netlify/functions/admin";
+
+const RC = [
+  ["enabled","BOOLEAN","true","Abilita app"],
+  ["maintenance","BOOLEAN","false","Manutenzione globale"],
+  ["maintenance_message","STRING","App in manutenzione codice 0x01","Messaggio manutenzione"],
+  ["min_version_code","NUMBER","1","Versione minima permessa"],
+  ["latest_version_code","NUMBER","43","Ultima versione disponibile"],
+  ["force_update","BOOLEAN","false","Aggiornamento obbligatorio"],
+  ["update_url","STRING","","Link APK"],
+  ["refresh_seconds","NUMBER","30","Refresh config"],
+  ["read_enabled","BOOLEAN","true","Lettura abilitata"],
+  ["dump_save_enabled","BOOLEAN","true","Salva dump abilitato"],
+  ["write_real_enabled","BOOLEAN","false","Scrittura reale"],
+  ["dump_only","BOOLEAN","true","Dump only"],
+  ["tracking_enabled","BOOLEAN","true","Tracking Firestore"],
+  ["nfc_guard_enabled","BOOLEAN","true","NFC Guard"]
+];
+
+let devices = [];
+let topups = [];
+let updateLogs = [];
+let rcModel = {};
+
+const $ = id => document.getElementById(id);
+
+function toast(msg, err=false) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.remove("hidden");
+  t.style.borderColor = err ? "#ffb4ab55" : "#4ade8055";
+  clearTimeout(window.__tt);
+  window.__tt = setTimeout(()=>t.classList.add("hidden"), 5200);
+}
+
+async function api(action, data=null, query={}) {
+  const token = await auth.currentUser.getIdToken();
+  const url = new URL(API, location.origin);
+  url.searchParams.set("action", action);
+  Object.entries(query || {}).forEach(([k,v]) => url.searchParams.set(k, v));
+  const opt = {
+    method: data ? "POST" : "GET",
+    headers: {
+      "Authorization": "Bearer " + token,
+      "Content-Type": "application/json"
+    }
+  };
+  if (data) opt.body = JSON.stringify(data);
+  const res = await fetch(url.toString(), opt);
+  const text = await res.text();
+  let json;
+  try { json = text ? JSON.parse(text) : {}; } catch(e) { throw new Error("Risposta non JSON: " + text.slice(0,200)); }
+  if (!res.ok || !json.ok) throw new Error(json.error || ("HTTP " + res.status));
+  $("apiState").textContent = "API OK";
+  $("apiState").className = "badge ok";
+  return json;
+}
+
+function euro(cents) { return "€ " + (Number(cents || 0) / 100).toFixed(2).replace(".", ","); }
+function date(v) { if (!v) return "—"; const d = new Date(v); return isNaN(d) ? "—" : d.toLocaleString("it-IT"); }
+function delta(t) { return t.credit_added !== undefined && t.credit_added !== null ? Number(t.credit_added)||0 : (Number(t.credit_after||0)-Number(t.credit_before||0)); }
+function ok(t) { const s=String(t.status||"").toLowerCase(); return s==="ok"||s==="success"||s==="done"||t.ok===true; }
+function esc(s) { return String(s ?? "").replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
+function css(s) { return String(s).replace(/[^A-Za-z0-9_-]/g, "_"); }
+
+$("loginBtn").onclick = async () => {
+  try { await signInWithEmailAndPassword(auth, $("email").value.trim(), $("pass").value); }
+  catch(e) { toast(e.message, true); }
+};
+$("logoutBtn").onclick = () => signOut(auth);
+$("refreshBtn").onclick = () => loadAll();
+
+onAuthStateChanged(auth, async u => {
+  if (u) {
+    $("loginPage").classList.add("hidden");
+    $("appPage").classList.remove("hidden");
+    $("authEmail").textContent = u.email || u.uid;
+    await loadAll();
+    try { await loadRemoteConfig(false); } catch(e) { console.warn("Remote Config auto load failed", e); }
+  } else {
+    $("loginPage").classList.remove("hidden");
+    $("appPage").classList.add("hidden");
+  }
+});
+
+document.querySelectorAll(".tabbtn").forEach(b => {
+  b.onclick = () => {
+    document.querySelectorAll(".tabbtn").forEach(x => x.classList.remove("active"));
+    document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
+    $("tab-" + b.dataset.tab).classList.add("active");
+    if (b.dataset.tab === "remote" && (!rcModel.update_url || !rcModel.update_url.value)) {
+      loadRemoteConfig(false).catch(e => console.warn("Remote Config load failed", e));
+    }
+  };
+});
+
+async function loadAll() {
+  try {
+    const dev = await api("devices");
+    devices = dev.devices || [];
+    renderDevices();
+    renderTxFilters();
+    await loadTopups();
+    await loadUpdateLogs();
+
+    const blocked = devices.filter(d => d.enabled === false).length;
+    $("statDevices").textContent = devices.length;
+    $("statBlocked").textContent = blocked;
+  } catch(e) {
+    $("apiState").textContent = "API ERRORE";
+    $("apiState").className = "badge err";
+    toast(e.message, true);
+  }
+}
+
+function renderMainStats(stats) {
+  $("statTotal").textContent = euro(stats.total);
+  $("statOps").textContent = (stats.ok_count ?? 0) + " / " + (stats.fail_count ?? 0);
+  $("statAvg").textContent = euro(stats.average);
+  $("statLast").textContent = date(stats.last_at);
+}
+
+function renderDevices() {
+  const search = $("deviceSearch").value.toLowerCase();
+  const state = $("deviceState").value;
+  const list = devices.filter(d => (!search || JSON.stringify(d).toLowerCase().includes(search)) && (state==="all" || (state==="enabled" ? d.enabled !== false : d.enabled === false)));
+  $("devicesList").innerHTML = list.map(d => `
+    <div class="device">
+      <div>
+        <div class="device-title">${esc(d.operator_name || "Senza nome")}</div>
+        <div class="small mono">${esc(d.id)}</div><br>
+        <div class="row"><span class="badge ${d.enabled === false ? "err":"ok"}">${d.enabled === false ? "BLOCCATO 0x01":"ABILITATO"}</span><span class="badge">${esc(d.phone_model || "modello —")}</span><span class="badge">v${esc(d.app_version_code ?? "—")}</span></div>
+        <p class="small">Ultima attività: ${date(d.last_topup_at || d.updated_at || d.created_at)}<br>Ultimo credito: ${euro(d.last_credit_before)} → ${euro(d.last_credit_after)}</p>
+        <label>Nome operatore</label><input id="op_${css(d.id)}" value="${esc(d.operator_name || "")}">
+      </div>
+      <div class="row" style="justify-content:flex-end">
+        <button class="btn secondary" onclick="showDeviceTx('${esc(d.id)}')">CARICHE</button>
+        <button class="btn ${d.enabled === false ? "ok":"danger"}" onclick="toggleDevice('${esc(d.id)}', ${d.enabled === false})">${d.enabled === false ? "SBLOCCA":"BLOCCA"}</button>
+        <button class="btn secondary" onclick="saveOperator('${esc(d.id)}')">SALVA NOME</button>
+        <button class="btn ghost" onclick='showRaw("Dispositivo", ${JSON.stringify(JSON.stringify(d))})'>RAW</button>
+      </div>
+    </div>`).join("") || '<div class="card">Nessun dispositivo.</div>';
+}
+
+$("deviceSearch").oninput = renderDevices;
+$("deviceState").onchange = renderDevices;
+
+window.saveOperator = async id => {
+  try {
+    await api("updateDevice", { id, operator_name: $("op_" + css(id)).value });
+    toast("Nome salvato.");
+    const dev = await api("devices");
+    devices = dev.devices || [];
+    renderDevices();
+    renderTxFilters();
+  } catch(e) { toast(e.message, true); }
+};
+
+window.toggleDevice = async (id, currentlyBlocked) => {
+  try {
+    await api("updateDevice", { id, enabled: !!currentlyBlocked });
+    toast(currentlyBlocked ? "Dispositivo sbloccato." : "Dispositivo bloccato 0x01.");
+    await loadAll();
+  } catch(e) { toast(e.message, true); }
+};
+
+window.showDeviceTx = id => {
+  document.querySelector('[data-tab="overview"]').click();
+  $("txDevice").value = id;
+  loadTopups();
+};
+
+function renderTxFilters() {
+  const cur = $("txDevice").value;
+  $("txDevice").innerHTML = '<option value="all">Tutti</option>' + devices.map(d => `<option value="${esc(d.id)}">${esc(d.operator_name || d.id)} · ${esc(d.id).slice(0,12)}</option>`).join("");
+  if ([...$("txDevice").options].some(o => o.value === cur)) $("txDevice").value = cur;
+}
+
+async function loadTopups() {
+  try {
+    const j = await api("topups", null, { period: $("txPeriod").value, device: $("txDevice").value, status: $("txStatus").value, search: $("txSearch").value || "" });
+    topups = j.topups || [];
+    renderMainStats(j.stats);
+    $("txTotal").textContent = euro(j.stats.total);
+    $("txOps").textContent = j.stats.ok_count + " / " + j.stats.fail_count;
+    $("txAvg").textContent = euro(j.stats.average);
+    $("txTable").innerHTML = table(topups);
+  } catch(e) { toast(e.message, true); }
+}
+
+$("loadTx").onclick = loadTopups;
+$("txDevice").onchange = loadTopups;
+$("txStatus").onchange = loadTopups;
+$("txSearch").oninput = () => { clearTimeout(window.__search); window.__search = setTimeout(loadTopups, 350); };
+$("txPeriod").onchange = async () => { await loadTopups(); await loadUpdateLogs(); };
+
+async function loadUpdateLogs() {
+  try {
+    const j = await api("updateLogs", null, { period: $("txPeriod").value, status: $("updateStatus").value, search: $("updateSearch").value || "" });
+    updateLogs = j.logs || [];
+    $("updateLogTable").innerHTML = updateLogTable(updateLogs);
+  } catch(e) { toast(e.message, true); }
+}
+
+$("loadUpdateLogs").onclick = loadUpdateLogs;
+$("updateStatus").onchange = loadUpdateLogs;
+$("updateSearch").oninput = () => { clearTimeout(window.__usearch); window.__usearch = setTimeout(loadUpdateLogs, 350); };
+
+function updateLogTable(list) {
+  if (!list || !list.length) return '<div class="card">Nessun log aggiornamento.</div>';
+  return `<table><thead><tr><th>Ora</th><th>Dispositivo</th><th>Evento</th><th>Stato</th><th>Versioni</th><th>Force</th><th>Dettaglio</th><th>Azioni</th></tr></thead><tbody>${list.map(l => `<tr>
+    <td>${date(l.created_at)}</td>
+    <td class="mono">${esc(l.operator_name || l.phone_id || "—")}</td>
+    <td class="mono">${esc(l.event || "—")}</td>
+    <td><span class="badge ${(String(l.status||"").includes("fail") || String(l.status||"").includes("not")) ? "err" : (String(l.status||"").includes("ok") || String(l.status||"").includes("downloaded") ? "ok" : "warn")}">${esc(l.status || "—")}</span></td>
+    <td class="mono">installata v${esc(l.installed_version_code ?? "—")} · min v${esc(l.min_version_code ?? "—")} · target v${esc(l.target_version_code ?? l.latest_version_code ?? "—")}</td>
+    <td>${l.force_update ? "SI" : "NO"}</td>
+    <td>${esc(l.reason || l.error_message || "—")}</td>
+    <td><button class="btn ghost" onclick='showRaw("Log aggiornamento", ${JSON.stringify(JSON.stringify(l))})'>RAW</button></td>
+  </tr>`).join("")}</tbody></table>`;
+}
+
+function table(list) {
+  if (!list || !list.length) return '<div class="card">Nessuna transazione.</div>';
+  return `<table><thead><tr><th>Ora</th><th>Dispositivo</th><th>UID</th><th>Credito</th><th>Delta</th><th>Stato</th><th>Vendor</th><th>Azioni</th></tr></thead><tbody>${list.map(t => `<tr>
+    <td>${date(t.created_at)}</td><td class="mono">${esc(t.operator_name || t.phone_id || "—")}</td><td class="mono">${esc(t.key_uid_last4 || t.uid || "—")}</td><td>${euro(t.credit_before)} → ${euro(t.credit_after)}</td><td>${euro(delta(t))}</td><td><span class="badge ${ok(t) ? "ok":"err"}">${ok(t) ? "OK":"NO"}</span></td><td class="mono">${esc(t.vendor || t.vendor_name || "—")}</td><td><button class="btn ghost" onclick='showRaw("Transazione", ${JSON.stringify(JSON.stringify(t))})'>RAW</button></td>
+  </tr>`).join("")}</tbody></table>`;
+}
+
+$("exportCsv").onclick = () => {
+  const cols = ["created_at","phone_id","operator_name","key_uid_last4","credit_before","credit_after","credit_added","status","vendor","lock_id","app_version_code"];
+  const csv = [cols.join(",")].concat(topups.map(r => cols.map(c => '"' + String(c==="created_at"?date(r[c]):(r[c] ?? "")).replace(/"/g,'""') + '"').join(","))).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv;charset=utf-8"}));
+  a.download = "admin_dashboard_transazioni.csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+
+$("loadUsers").onclick = async () => {
+  try {
+    const j = await api("authUsers");
+    $("usersTable").innerHTML = `<table><thead><tr><th>Email</th><th>UID</th><th>Stato</th><th>Creato</th><th>Ultimo accesso</th><th>Azioni</th></tr></thead><tbody>${j.users.map(u => `<tr><td>${esc(u.email || "—")}</td><td class="mono">${esc(u.uid)}</td><td><span class="badge ${u.disabled ? "err":"ok"}">${u.disabled ? "BLOCCATO":"ATTIVO"}</span></td><td>${esc(u.creationTime || "—")}</td><td>${esc(u.lastSignInTime || "—")}</td><td><button class="btn ${u.disabled ? "ok":"danger"}" onclick="setAuthUserDisabled('${esc(u.uid)}', ${!u.disabled})">${u.disabled ? "SBLOCCA":"BLOCCA"}</button></td></tr>`).join("")}</tbody></table>`;
+  } catch(e) { toast(e.message, true); }
+};
+
+window.setAuthUserDisabled = async (uid, disabled) => {
+  try {
+    await api("setAuthUserDisabled", { uid, disabled });
+    toast("Utente aggiornato.");
+    $("loadUsers").click();
+  } catch(e) { toast(e.message, true); }
+};
+
+
+
+function mb(n) {
+  return (Number(n || 0) / 1024 / 1024).toFixed(1) + " MB";
+}
+
+function xhrPutFile(url, file, contentType) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("PUT", url, true);
+    xhr.setRequestHeader("Content-Type", contentType);
+
+    xhr.upload.onprogress = ev => {
+      if (ev.lengthComputable) {
+        const pct = Math.round((ev.loaded / ev.total) * 100);
+        $("apkProgressBar").style.width = pct + "%";
+        $("apkProgressText").textContent = `${pct}% · ${mb(ev.loaded)} / ${mb(ev.total)}`;
+      } else {
+        $("apkProgressText").textContent = "Caricamento APK...";
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else reject(new Error("Upload APK fallito: HTTP " + xhr.status + " " + xhr.responseText));
+    };
+
+    xhr.onerror = () => reject(new Error("Upload APK fallito. Controlla CORS dello storage privato."));
+    xhr.send(file);
+  });
+}
+
+async function uploadApkAndUpdateRemote() {
+  const fileInput = $("apkFile");
+  const file = fileInput?.files?.[0];
+
+  if (!file) {
+    toast("Seleziona un file APK.", true);
+    return;
+  }
+
+  if (!file.name.toLowerCase().endsWith(".apk")) {
+    toast("Il file deve essere .apk", true);
+    return;
+  }
+
+  const versionCode = Number($("apkVersionCode").value || 0);
+  if (!versionCode || versionCode < 1) {
+    toast("Inserisci il versionCode.", true);
+    return;
+  }
+
+  const contentType = "application/vnd.android.package-archive";
+
+  $("uploadApkBtn").disabled = true;
+  $("apkProgressBar").style.width = "0%";
+  $("apkProgressText").textContent = "Preparo upload...";
+
+  try {
+    await loadRemoteConfig(false).catch(() => {});
+    ensureRc();
+
+    const signed = await api("createApkUploadUrl", {
+      versionCode,
+      fileName: file.name,
+      sizeBytes: file.size,
+      contentType,
+      siteOrigin: location.origin
+    });
+
+    await xhrPutFile(signed.uploadUrl, file, contentType);
+
+    rcModel.update_url = {
+      type: "STRING",
+      value: signed.downloadUrl,
+      description: rcModel.update_url?.description || "Link APK"
+    };
+
+    rcModel.latest_version_code = {
+      type: "NUMBER",
+      value: String(versionCode),
+      description: rcModel.latest_version_code?.description || "Ultima versione disponibile"
+    };
+
+    if ($("apkMinMode").value === "same") {
+      rcModel.min_version_code = {
+        type: "NUMBER",
+        value: String(versionCode),
+        description: rcModel.min_version_code?.description || "Versione minima permessa"
+      };
+    }
+
+    if ($("apkForceMode").value !== "no") {
+      rcModel.force_update = {
+        type: "BOOLEAN",
+        value: $("apkForceMode").value,
+        description: rcModel.force_update?.description || "Aggiornamento obbligatorio"
+      };
+    }
+
+    await api("publishRemoteConfig", { parameters: rcModel });
+    renderRc();
+
+    $("apkProgressBar").style.width = "100%";
+    $("apkProgressText").textContent = "100% · APK caricato e Remote Config aggiornato";
+    toast("APK caricato. update_url aggiornato in Remote Config.");
+  } catch(e) {
+    toast(e.message, true);
+    $("apkProgressText").textContent = "Errore: " + e.message;
+  } finally {
+    $("uploadApkBtn").disabled = false;
+  }
+}
+
+$("uploadApkBtn").onclick = uploadApkAndUpdateRemote;
+
+function ensureRc() {
+  RC.forEach(([k,t,v,d]) => {
+    if (!rcModel[k]) rcModel[k] = { type:t, value:(k === "update_url" ? "" : v), description:d };
+  });
+}
+
+function renderRc() {
+  ensureRc();
+  $("rcParams").innerHTML = Object.keys(rcModel).sort((a,b) => {
+    const ai=RC.findIndex(x=>x[0]===a), bi=RC.findIndex(x=>x[0]===b);
+    return (ai<0?999:ai)-(bi<0?999:bi)||a.localeCompare(b);
+  }).map(k => {
+    const p = rcModel[k];
+    const ctrl = p.type==="BOOLEAN"
+      ? `<select data-rck="${esc(k)}" data-field="value"><option value="true" ${String(p.value)==="true"?"selected":""}>true</option><option value="false" ${String(p.value)==="false"?"selected":""}>false</option></select>`
+      : `<input data-rck="${esc(k)}" data-field="value" value="${esc(p.value || "")}">`;
+    return `<div class="param">
+      <div class="param-head">
+        <div class="param-title">${esc(k)}</div>
+        <div class="param-desc">${esc(p.description || "")}</div>
+      </div>
+      <div class="fieldbox">
+        <label>TIPO</label>
+        <select data-rck="${esc(k)}" data-field="type">${["STRING","BOOLEAN","NUMBER","JSON"].map(t=>`<option ${p.type===t?"selected":""}>${t}</option>`).join("")}</select>
+      </div>
+      <div class="fieldbox">
+        <label>VALORE</label>
+        ${ctrl}
+      </div>
+      <div class="param-actions">
+        ${k==="update_url" && p.value ? `<button class="btn secondary" onclick="window.open('${esc(p.value || "")}','_blank')">APRI APK</button>`:""}
+        <button class="btn danger" onclick="deleteRc('${esc(k)}')">ELIMINA</button>
+      </div>
+    </div>`;
+  }).join("");
+  document.querySelectorAll("[data-rck]").forEach(el => {
+    el.oninput = el.onchange = () => {
+      rcModel[el.dataset.rck][el.dataset.field] = el.value;
+      if (el.dataset.field === "type") renderRc();
+    };
+  });
+}
+
+async function loadRemoteConfig(showToast=true) {
+  try {
+    const j = await api("remoteConfig");
+    rcModel = {};
+    Object.entries(j.parameters || {}).forEach(([k,p]) => {
+      const def = RC.find(x=>x[0]===k);
+      rcModel[k] = {
+        type: p.type || def?.[1] || "STRING",
+        value: (p.value !== undefined && p.value !== null) ? String(p.value) : "",
+        description: p.description || def?.[3] || ""
+      };
+    });
+    renderRc();
+
+    const urlValue = rcModel.update_url?.value || "";
+    const state = $("rcLoadedState");
+    if (state) {
+      state.textContent = urlValue
+        ? "update_url caricato da Remote Config."
+        : "Remote Config caricato, ma update_url non è impostato.";
+    }
+
+    if (showToast) toast("Remote Config caricato.");
+  } catch(e) {
+    if (showToast) toast(e.message, true);
+    throw e;
+  }
+}
+
+$("loadRc").onclick = () => loadRemoteConfig(true);
+
+$("saveRc").onclick = async () => {
+  try {
+    const j = await api("publishRemoteConfig", { parameters: rcModel });
+    toast("Remote Config pubblicato. Versione " + (j.version?.versionNumber || "—"));
+  } catch(e) { toast(e.message, true); }
+};
+
+window.deleteRc = k => { if (confirm("Eliminare " + k + "?")) { delete rcModel[k]; renderRc(); } };
+window.addRcParam = () => {
+  const k = $("newRcKey").value.trim();
+  if (!k) return toast("Metti una chiave.", true);
+  rcModel[k] = { type:$("newRcType").value, value:$("newRcValue").value, description:"Parametro aggiunto da dashboard" };
+  $("newRcKey").value = ""; $("newRcValue").value = "";
+  renderRc();
+};
+window.presetSafe = () => { ensureRc(); rcModel.enabled.value="true"; rcModel.maintenance.value="false"; rcModel.dump_only.value="true"; rcModel.write_real_enabled.value="false"; renderRc(); };
+window.presetMaintenance = () => { ensureRc(); rcModel.enabled.value="false"; rcModel.maintenance.value="true"; rcModel.maintenance_message.value="App in manutenzione codice 0x01"; renderRc(); };
+window.presetWrite = () => { ensureRc(); rcModel.enabled.value="true"; rcModel.maintenance.value="false"; rcModel.dump_only.value="false"; rcModel.write_real_enabled.value="true"; renderRc(); };
+window.presetNormal = () => { ensureRc(); rcModel.enabled.value="true"; rcModel.maintenance.value="false"; rcModel.dump_only.value="true"; rcModel.write_real_enabled.value="false"; rcModel.tracking_enabled.value="true"; renderRc(); };
+window.showRaw = (title, raw) => { $("modalTitle").textContent = title; $("modalBody").textContent = JSON.stringify(JSON.parse(raw), null, 2); $("modal").classList.add("open"); };
+window.closeModal = () => $("modal").classList.remove("open");
+
+ensureRc();
+renderRc();
+</script>
+</body>
+</html>

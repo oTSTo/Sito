@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Catalogo film e serie TV con ricerca TMDB, login demo e player fullscreen configurabile.">
+  <title>StreamingCommunity — Film e Serie</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/stream/styles.css">
+</head>
+<body>
+  <header class="navbar" id="navbar">
+    <div class="navbar-inner">
+      <a href="#" class="logo" id="logo" aria-label="Home">
+        <span class="logo-mark">▶</span>
+        <span class="logo-text">StreamingCommunity</span>
+      </a>
+
+      <nav class="nav-links" id="nav-links" aria-label="Navigazione principale">
+        <button class="nav-link active" data-page="home">Home</button>
+        <button class="nav-link" data-page="movies">Film</button>
+        <button class="nav-link" data-page="shows">Serie TV</button>
+        <button class="nav-link" data-page="archive">Archivio</button>
+      </nav>
+
+      <div class="navbar-right">
+        <div class="search-shell" id="search-shell">
+          <button class="search-icon-btn" id="search-toggle" aria-label="Apri ricerca">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          </button>
+          <div class="search-box" id="search-box">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input id="search-input" type="search" placeholder="Cerca film o serie" autocomplete="off">
+            <button id="search-close" aria-label="Chiudi ricerca">×</button>
+          </div>
+          <div class="search-results" id="search-results" aria-live="polite"></div>
+        </div>
+
+        <button class="nav-btn secondary" id="register-open">Registrati</button>
+        <button class="nav-btn primary" id="login-open">Accedi</button>
+        <button class="profile-chip hidden" id="profile-chip"><span id="profile-name">Utente</span></button>
+        <button class="nav-btn danger hidden" id="logout-btn">Esci</button>
+        <button class="hamburger" id="hamburger" aria-label="Menu"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </header>
+
+  <div class="mobile-menu" id="mobile-menu">
+    <button class="mobile-link active" data-page="home">Home</button>
+    <button class="mobile-link" data-page="movies">Film</button>
+    <button class="mobile-link" data-page="shows">Serie TV</button>
+    <button class="mobile-link" data-page="archive">Archivio</button>
+  </div>
+
+  <main class="main" id="main">
+    <section class="setup-banner hidden" id="setup-banner">
+      <b>TMDB non configurato.</b> Inserisci la tua API key in <code>app.js</code> oppure esegui in console: <code>localStorage.setItem('tmdb_api_key','LA_TUA_KEY')</code>
+    </section>
+
+    <section class="page page-home active" id="page-home">
+      <section class="hero" id="hero">
+        <div class="hero-bg" id="hero-bg"></div>
+        <div class="hero-shade"></div>
+        <div class="hero-content">
+          <div class="hero-kicker" id="hero-kicker">
+            <span class="pill red">Novità</span>
+            <span class="pill">Serie TV</span>
+          </div>
+          <h1 class="hero-title" id="hero-title">Caricamento…</h1>
+          <p class="hero-plot" id="hero-plot">Sto caricando film e serie dalle API.</p>
+          <div class="hero-meta" id="hero-meta"></div>
+          <div class="hero-actions">
+            <button class="btn-play" id="hero-play">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              Riproduci
+            </button>
+            <button class="btn-info" id="hero-info">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+              Altre info
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="continue-section hidden" id="continue-section">
+        <div class="section-header compact">
+          <div>
+            <h2>Continua a guardare</h2>
+            <p>Salvato sul tuo account locale.</p>
+          </div>
+          <button class="mini-btn" id="clear-progress">Svuota</button>
+        </div>
+        <div class="continue-track" id="continue-track"></div>
+      </section>
+
+      <section class="rows" id="rows">
+        <section class="slider-section">
+          <div class="slider-header"><h2>I titoli del momento</h2><button class="slider-browse" data-page="archive">Sfoglia tutti</button></div>
+          <div class="slider-wrapper"><button class="slider-arrow left" aria-label="Precedente">‹</button><div class="slider-track" id="row-trending"></div><button class="slider-arrow right" aria-label="Successivo">›</button></div>
+        </section>
+        <section class="slider-section">
+          <div class="slider-header"><h2>Film popolari</h2><button class="slider-browse" data-page="movies">Sfoglia tutti</button></div>
+          <div class="slider-wrapper"><button class="slider-arrow left" aria-label="Precedente">‹</button><div class="slider-track" id="row-movies"></div><button class="slider-arrow right" aria-label="Successivo">›</button></div>
+        </section>
+        <section class="slider-section">
+          <div class="slider-header"><h2>Serie TV popolari</h2><button class="slider-browse" data-page="shows">Sfoglia tutti</button></div>
+          <div class="slider-wrapper"><button class="slider-arrow left" aria-label="Precedente">‹</button><div class="slider-track" id="row-shows"></div><button class="slider-arrow right" aria-label="Successivo">›</button></div>
+        </section>
+        <section class="slider-section">
+          <div class="slider-header"><h2>Top 10</h2><button class="slider-browse" data-page="archive">Sfoglia tutti</button></div>
+          <div class="slider-wrapper"><button class="slider-arrow left" aria-label="Precedente">‹</button><div class="slider-track top10" id="row-top10"></div><button class="slider-arrow right" aria-label="Successivo">›</button></div>
+        </section>
+        <section class="slider-section">
+          <div class="slider-header"><h2>Nuove uscite film</h2><button class="slider-browse" data-page="movies">Sfoglia tutti</button></div>
+          <div class="slider-wrapper"><button class="slider-arrow left" aria-label="Precedente">‹</button><div class="slider-track" id="row-new-movies"></div><button class="slider-arrow right" aria-label="Successivo">›</button></div>
+        </section>
+      </section>
+    </section>
+
+    <section class="page page-browse" id="page-browse">
+      <div class="browse-head">
+        <div>
+          <p class="eyebrow" id="browse-eyebrow">Archivio</p>
+          <h1 id="browse-title">Archivio</h1>
+          <p id="browse-subtitle">Film e serie caricati dalle API TMDB.</p>
+        </div>
+        <div class="filters">
+          <select id="filter-type" aria-label="Tipo">
+            <option value="all">Tutti</option>
+            <option value="movie">Film</option>
+            <option value="tv">Serie TV</option>
+          </select>
+          <select id="filter-sort" aria-label="Ordina">
+            <option value="popularity.desc">Popolarità</option>
+            <option value="vote_average.desc">Voto</option>
+            <option value="primary_release_date.desc">Più recenti</option>
+          </select>
+          <button class="mini-btn" id="browse-refresh">Aggiorna</button>
+        </div>
+      </div>
+      <div class="grid" id="browse-grid"></div>
+      <div class="loadmore-wrap"><button class="loadmore" id="load-more">Carica altro</button></div>
+    </section>
+
+    <section class="page page-detail" id="page-detail">
+      <button class="back-btn" id="detail-back">← Indietro</button>
+      <article class="detail-card" id="detail-card">
+        <div class="detail-bg" id="detail-bg"></div>
+        <div class="detail-gradient"></div>
+        <div class="detail-body">
+          <div class="detail-cover" id="detail-cover"></div>
+          <div class="detail-info">
+            <div class="detail-kicker" id="detail-kicker"></div>
+            <h1 id="detail-title">Titolo</h1>
+            <div class="detail-meta" id="detail-meta"></div>
+            <p class="detail-plot" id="detail-plot"></p>
+            <div class="detail-genres" id="detail-genres"></div>
+            <div class="detail-actions">
+              <button class="btn-play" id="detail-play">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                Riproduci
+              </button>
+              <button class="btn-info" id="detail-list">+ La mia lista</button>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <section class="episodes-section hidden" id="episodes-section">
+        <div class="section-header">
+          <div>
+            <h2>Episodi</h2>
+            <p id="episodes-subtitle">Scegli stagione ed episodio.</p>
+          </div>
+        </div>
+        <div class="season-tabs" id="season-tabs"></div>
+        <div class="episodes-grid" id="episodes-grid"></div>
+      </section>
+
+      <section class="slider-section related-section">
+        <div class="slider-header"><h2>Simili</h2></div>
+        <div class="slider-wrapper"><button class="slider-arrow left" aria-label="Precedente">‹</button><div class="slider-track" id="row-related"></div><button class="slider-arrow right" aria-label="Successivo">›</button></div>
+      </section>
+    </section>
+  </main>
+
+  <section class="player-screen hidden" id="player-screen" aria-hidden="true">
+    <div class="player-area" id="player-area"></div>
+    <button class="player-back" id="player-close" aria-label="Chiudi player">←</button>
+    <div class="player-bottom" id="player-bottom">
+      <input class="player-progress" id="player-progress" type="range" min="0" max="100" value="0" step="0.1" aria-label="Avanzamento">
+      <div class="player-controls">
+        <button id="p-play" aria-label="Play/Pausa">⏸</button>
+        <button id="p-back10" aria-label="Indietro 10 secondi">↺10</button>
+        <button id="p-forward10" aria-label="Avanti 10 secondi">10↻</button>
+        <button id="p-volume" aria-label="Audio">🔊</button>
+        <div class="player-title-wrap">
+          <strong id="player-title">Titolo</strong>
+          <span id="player-subtitle"></span>
+        </div>
+        <span id="player-time">0:00 / 0:00</span>
+        <button id="p-fullscreen" aria-label="Schermo intero">⛶</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="auth-overlay hidden" id="auth-overlay" aria-hidden="true">
+    <div class="auth-modal">
+      <button class="auth-close" id="auth-close" aria-label="Chiudi">×</button>
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-login">Accedi</button>
+        <button class="auth-tab" id="tab-register">Registrati</button>
+      </div>
+      <div class="auth-message hidden" id="auth-message"></div>
+      <form class="auth-form" id="auth-form">
+        <div class="form-group register-only hidden">
+          <label>Nome utente</label>
+          <input type="text" id="auth-name" autocomplete="nickname" placeholder="Thomas">
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="auth-email" autocomplete="email" placeholder="email@example.com" required>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="auth-password" autocomplete="current-password" placeholder="Minimo 6 caratteri" required>
+        </div>
+        <div class="form-group register-only hidden">
+          <label>Conferma password</label>
+          <input type="password" id="auth-password2" autocomplete="new-password" placeholder="Ripeti password">
+        </div>
+        <button class="btn-auth" id="auth-submit" type="submit">Accedi</button>
+        <p class="auth-note">Demo locale: per produzione collega Firebase/Auth o un backend vero.</p>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script type="module" src="/stream/app.js"></script>
+</body>
+</html>
