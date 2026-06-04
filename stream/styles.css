@@ -612,17 +612,12 @@ img {
   overscroll-behavior-x: contain;
   scroll-snap-type: x proximity;
   padding: 3px 0 12px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, .18) transparent
+  scrollbar-width: none;
+  -ms-overflow-style: none
 }
 
 .slider-track::-webkit-scrollbar {
-  height: 5px
-}
-
-.slider-track::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, .18);
-  border-radius: 999px
+  display: none
 }
 
 .slider-arrow {
@@ -1615,4 +1610,78 @@ img {
   .continue-track {
     grid-template-columns: 1fr
   }
+}
+/* SC-CARD-LOGO — logo sovrapposto alla card stile StreamingCommunity */
+.card-logo-layer {
+  position: absolute !important;
+  left: 10% !important;
+  right: 12% !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  z-index: 7 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  pointer-events: none !important;
+}
+.card-logo-img {
+  display: block !important;
+  max-width: 72% !important;
+  max-height: 56px !important;
+  object-fit: contain !important;
+  object-position: left center !important;
+  filter: drop-shadow(0 5px 12px rgba(0,0,0,.9)) !important;
+}
+.card-logo-text {
+  color: #fff !important;
+  font-size: clamp(14px, 1.2vw, 24px) !important;
+  font-weight: 900 !important;
+  line-height: .92 !important;
+  max-width: 80% !important;
+  letter-spacing: -.04em !important;
+  text-transform: uppercase !important;
+  text-shadow: 0 4px 14px rgba(0,0,0,.95) !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+}
+.card:hover .card-logo-layer {
+  transform: translateY(-50%) scale(1.02) !important;
+}
+.card .card-overlay {
+  display: none !important;
+}
+@media (max-width: 799px) {
+  .card-logo-layer { display: none !important; }
+  .card .card-overlay { display: block !important; }
+}
+
+/* CONTINUE — pulsante × rimuovi per singolo item */
+.continue-remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.68);
+  border: 1px solid rgba(255,255,255,.22);
+  color: #fff;
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity .16s, background .16s;
+}
+.continue-card:hover .continue-remove {
+  opacity: 1;
+}
+.continue-remove:hover {
+  background: rgba(229,9,20,.7) !important;
+  border-color: rgba(229,9,20,.8) !important;
 }

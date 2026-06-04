@@ -187,17 +187,17 @@ async function handleAuth(ev) {
 // Il tempo viene accumulato con un timer ogni 30s e salvato sia locale che Firestore.
 // Alla chiusura del player si salva il totale finale.
 
-function localKey() { return CURRENT_USER ? `sc_prog_${CURRENT_USER.uid}` : null; }
+function localKey() { return CURRENT_USER ? `sc_prog_${CURRENT_USER.uid}` : 'sc_prog_guest'; }
 function readLocal() {
-  const k = localKey(); if (!k) return {};
+  const k = localKey();
   try { return JSON.parse(localStorage.getItem(k) || '{}'); } catch { return {}; }
 }
 function writeLocal(id, data) {
-  const k = localKey(); if (!k || !id) return;
+  const k = localKey(); if (!id) return;
   try { const all = readLocal(); all[id] = { ...data, _ts: Date.now() }; localStorage.setItem(k, JSON.stringify(all)); } catch { }
 }
 function deleteLocal(id) {
-  const k = localKey(); if (!k || !id) return;
+  const k = localKey(); if (!id) return;
   try { const all = readLocal(); delete all[id]; localStorage.setItem(k, JSON.stringify(all)); } catch { }
 }
 function localItems() {
@@ -215,7 +215,7 @@ function currentWatchSeconds() {
 }
 
 async function commitProgress() {
-  if (!CURRENT_USER || !currentDetail) return;
+  if (!currentDetail) return;
   const id = fsId();
   const type = getType(currentDetail);
   const secs = currentWatchSeconds();
@@ -237,10 +237,10 @@ async function commitProgress() {
     episode: type === 'tv' ? (currentEpisode || 1) : null,
     lastTime: secs, duration, progress: pct,
   };
-  // Salva locale sempre
+  // Salva locale sempre (anche senza login)
   writeLocal(id, payload);
-  // Salva Firestore
-  if (FB) {
+  // Salva Firestore solo se loggato
+  if (FB && CURRENT_USER) {
     try {
       await FB.setDoc(
         FB.doc(FB.db, 'users', CURRENT_USER.uid, 'watchProgress', id),
@@ -268,12 +268,16 @@ async function stopAndSave() {
 }
 
 async function loadProgress() {
-  if (!CURRENT_USER) { $('continue-section').classList.add('hidden'); $('continue-track').innerHTML = ''; return; }
+  if (!CURRENT_USER) {
+    renderContinueWatching(localItems().slice(0, 12));
+    return;
+  }
   try {
     if (FB) {
       const q = FB.query(FB.collection(FB.db, 'users', CURRENT_USER.uid, 'watchProgress'), FB.orderBy('updatedAt', 'desc'), FB.limit(12));
       const snap = await FB.getDocs(q);
-      renderContinueWatching(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const fsItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderContinueWatching(fsItems.length ? fsItems : localItems().slice(0, 12));
     } else {
       renderContinueWatching(localItems().slice(0, 12));
     }
@@ -286,7 +290,7 @@ async function loadProgress() {
 function renderContinueWatching(items) {
   if (!items) items = localItems().slice(0, 12);
   const sec = $('continue-section'), track = $('continue-track');
-  if (!CURRENT_USER || !items.length) { sec.classList.add('hidden'); track.innerHTML = ''; return; }
+  if (!items.length) { sec.classList.add('hidden'); track.innerHTML = ''; return; }
   sec.classList.remove('hidden');
   track.innerHTML = items.map(x => {
     const pct = Math.max(4, Math.min(100, Number(x.progress || 0) || 6));
@@ -441,7 +445,7 @@ async function openBrowse(type = 'all') {
   await loadBrowse(false);
 }
 async function loadBrowse(append = false) {
-  if (browse.loading) return; browse.loading = true; $('load-more').disabled = true;
+  if (browse.loading) return; browse.loading = true;
   try {
     let path, params = { page: browse.page, sort_by: browse.sort };
     if (browse.type === 'movie') path = '/movie/popular';
@@ -451,7 +455,7 @@ async function loadBrowse(append = false) {
     renderGrid('browse-grid', toTyped(data.results || [], browse.type === 'all' ? undefined : browse.type), append);
     browse.page++;
   } catch (e) { if (!append) $('browse-grid').innerHTML = '<div style="color:#777;padding:18px">Errore.</div>'; console.warn(e); }
-  browse.loading = false; $('load-more').disabled = false;
+  browse.loading = false;
 }
 
 // ─── SEARCH ───────────────────────────────────────────────────────────────────
@@ -658,20 +662,27 @@ function bindEvents() {
   $('filter-type').addEventListener('change', async e => { browse.type = e.target.value === 'tv' ? 'tv' : e.target.value === 'movie' ? 'movie' : 'all'; browse.page = 1; await openBrowse(browse.type); });
   $('filter-sort').addEventListener('change', async e => { browse.sort = e.target.value; browse.page = 1; await loadBrowse(false); });
   $('browse-refresh').addEventListener('click', () => { browse.page = 1; loadBrowse(false); });
-  $('load-more').addEventListener('click', () => loadBrowse(true));
+
+  // Infinite scroll — carica quando l'utente arriva in fondo
+  const sentinel = $('scroll-sentinel');
+  if (sentinel && 'IntersectionObserver' in window) {
+    const io = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) loadBrowse(true);
+    }, { rootMargin: '200px' });
+    io.observe(sentinel);
+  }
 
   $('login-open').addEventListener('click', () => openAuth('login'));
   $('register-open').addEventListener('click', () => openAuth('register'));
   $('logout-btn').addEventListener('click', async () => {
     if (FB) await FB.signOut(FB.auth);
-    CURRENT_USER = null; updateAuthUI(); renderContinueWatching([]); toast('Sei uscito');
+    CURRENT_USER = null; updateAuthUI(); renderContinueWatching(localItems().slice(0, 12)); toast('Sei uscito');
   });
   $('auth-close').addEventListener('click', closeAuth);
   $('auth-overlay').addEventListener('click', e => { if (e.target === $('auth-overlay')) closeAuth(); });
   $('tab-login').addEventListener('click', () => setAuthMode('login'));
   $('tab-register').addEventListener('click', () => setAuthMode('register'));
   $('auth-form').addEventListener('submit', handleAuth);
-  $('clear-progress').addEventListener('click', clearAllProgress);
 
   // Player
   $('player-close').addEventListener('click', closePlayer);
@@ -696,11 +707,13 @@ async function init() {
       if (user) {
         try { await FB.setDoc(FB.doc(FB.db, 'users', user.uid), { email: user.email || '', displayName: user.displayName || '', lastLoginAt: FB.serverTimestamp() }, { merge: true }); } catch { }
         await loadProgress();
-      } else { renderContinueWatching([]); }
+      } else { renderContinueWatching(localItems().slice(0, 12)); }
     });
   } catch (e) { console.warn('Firebase offline', e); FB = null; }
   $('setup-banner').classList.toggle('hidden', TMDB_OK);
   updateAuthUI(); bindEvents();
+  // Mostra subito i progressi locali anche prima del login
+  renderContinueWatching(localItems().slice(0, 12));
   await loadGenres();
   await initHome();
 }
