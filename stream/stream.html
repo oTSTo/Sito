@@ -191,7 +191,6 @@
         <div class="detail-bg" id="detail-bg"></div>
         <div class="detail-gradient"></div>
         <div class="detail-body">
-          <div class="detail-cover" id="detail-cover"></div>
           <div class="detail-info">
             <div class="detail-kicker" id="detail-kicker"></div>
             <h1 id="detail-title">Titolo</h1>
@@ -212,11 +211,9 @@
       </article>
 
       <section class="episodes-section hidden" id="episodes-section">
-        <div class="section-header">
-          <div>
-            <h2>Episodi</h2>
-            <p id="episodes-subtitle">Scegli stagione ed episodio.</p>
-          </div>
+        <div class="episodes-header">
+          <h2>Episodi</h2>
+          <select class="season-select" id="season-select" aria-label="Seleziona stagione"></select>
         </div>
         <div class="season-tabs" id="season-tabs"></div>
         <div class="episodes-grid" id="episodes-grid"></div>
@@ -238,19 +235,18 @@
     <div class="player-area" id="player-area"></div>
     <button class="player-back" id="player-close" aria-label="Chiudi player">←</button>
     <div class="player-bottom" id="player-bottom">
-      <input class="player-progress" id="player-progress" type="range" min="0" max="100" value="0" step="0.1"
+      <input class="player-progress" id="player-progress" type="range" min="0" max="100" value="0" step="1"
         aria-label="Avanzamento">
       <div class="player-controls">
         <button id="p-play" aria-label="Play/Pausa">⏸</button>
-        <button id="p-back10" aria-label="Indietro 10 secondi">↺10</button>
-        <button id="p-forward10" aria-label="Avanti 10 secondi">10↻</button>
-        <button id="p-volume" aria-label="Audio">🔊</button>
+        <button id="p-back10" aria-label="Indietro 10 secondi" title="−10s">↺</button>
+        <button id="p-forward10" aria-label="Avanti 10 secondi" title="+10s">↻</button>
         <div class="player-title-wrap">
           <strong id="player-title">Titolo</strong>
           <span id="player-subtitle"></span>
         </div>
-        <span id="player-time">0:00 / 0:00</span>
-        <button id="p-fullscreen" aria-label="Schermo intero">⛶</button>
+        <span id="player-time">0:00</span>
+        <button id="p-fullscreen" aria-label="Schermo intero" title="Schermo intero">⛶</button>
       </div>
     </div>
   </section>

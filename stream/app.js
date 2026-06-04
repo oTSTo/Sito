@@ -495,9 +495,8 @@ async function openDetail(id, type, fromResume = false) {
 }
 function renderDetail(x) {
   const type = getType(x);
-  const bg = detailBg(x), poster = imgURL(x.poster_path, 'w500');
+  const bg = detailBg(x);
   $('detail-bg').style.backgroundImage = bg ? `url('${bg}')` : '';
-  $('detail-cover').innerHTML = poster ? `<img src="${escA(poster)}" alt="${escA(getTitle(x))}">` : '<div class="card-ph" style="aspect-ratio:2/3;font-size:3rem">🎬</div>';
   $('detail-kicker').innerHTML = `<span class="pill red">${type === 'tv' ? 'Serie TV' : 'Film'}</span>`;
   $('detail-title').textContent = getTitle(x);
   const rt = x.runtime ? `${x.runtime} min` : (Array.isArray(x.episode_run_time) && x.episode_run_time[0] ? `${x.episode_run_time[0]} min/ep` : '');
@@ -509,34 +508,56 @@ function renderDetail(x) {
 function mockSeasons(x) { return Array.from({ length: x.number_of_seasons || 1 }, (_, i) => ({ season_number: i + 1 })); }
 async function renderSeasons(x) {
   const seasons = x.seasons?.filter(s => Number(s.season_number) > 0) || mockSeasons(x);
+  // Populate hidden tabs (kept for compat) and visible select
   $('season-tabs').innerHTML = seasons.map(s => `<button class="season-tab${s.season_number === 1 ? ' active' : ''}" data-season="${s.season_number}">Stagione ${s.season_number}</button>`).join('');
+  const sel = $('season-select');
+  if (sel) {
+    sel.innerHTML = seasons.map(s => `<option value="${s.season_number}">Stagione ${s.season_number}</option>`).join('');
+    sel.value = '1';
+  }
   await loadSeason(x.id, 1);
 }
 async function loadSeason(tvId, n) {
   currentSeason = n; currentEpisode = null;
   $$('.season-tab').forEach(b => b.classList.toggle('active', Number(b.dataset.season) === Number(n)));
+  const sel = $('season-select'); if (sel) sel.value = String(n);
   try {
     const data = await api(`/tv/${tvId}/season/${n}`, { language: 'it-IT' });
     const today = new Date().toISOString().slice(0, 10);
     currentEpisodes = (data.episodes || []).filter(ep => !ep.air_date || ep.air_date <= today);
-    $('episodes-subtitle').textContent = `Stagione ${n} · ${currentEpisodes.length} episodi`;
+    // Get saved progress for this show to show progress bars
+    const progKey = `tv_${tvId}`;
+    const localProg = readLocal();
     $('episodes-grid').innerHTML = currentEpisodes.length
       ? currentEpisodes.map(ep => {
-        const nm = ep.episode_number, name = ep.name || `Episodio ${nm}`;
+        const nm = ep.episode_number;
+        const name = ep.name || `Episodio ${nm}`;
         const img = ep.still_path ? imgURL(ep.still_path, 'w300') : '';
         const rt = ep.runtime ? `${ep.runtime} min` : '';
-        return `<article class="episode-card" data-episode="${nm}">
-          <div class="episode-thumb">${img ? `<img src="${escA(img)}" alt="${escA(name)}" loading="lazy">` : `<div class="card-ph">${nm}</div>`}<button class="episode-play" data-episode-play="${nm}">▶</button></div>
+        // Check local progress for this episode
+        const epProgKey = `tv_${tvId}`;
+        const epProg = localProg[epProgKey];
+        const watched = epProg && epProg.season === n && epProg.episode === nm;
+        const progPct = watched ? Math.max(3, Math.min(97, epProg.progress || 0)) : 0;
+        return `<article class="episode-card${watched ? ' active' : ''}" data-episode="${nm}">
+          <div class="episode-num">${nm}</div>
+          <div class="episode-thumb">
+            ${img ? `<img src="${escA(img)}" alt="${escA(name)}" loading="lazy">` : `<div class="card-ph" style="font-size:1.8rem">🎬</div>`}
+            <div class="episode-play"><div class="episode-play-icon">▶</div></div>
+            ${progPct > 0 ? `<div class="episode-ep-bar"><span style="width:${progPct}%"></span></div>` : ''}
+          </div>
           <div class="episode-body">
-            <div class="episode-top"><span>Ep. ${nm}${rt ? ' · ' + rt : ''}</span></div>
-            <div class="episode-title">${nm}. ${esc(name)}</div>
+            <div class="episode-top">
+              <div class="episode-title">${esc(name)}</div>
+              ${rt ? `<span class="episode-duration">${rt}</span>` : ''}
+            </div>
             <p class="episode-plot">${esc(ep.overview || '')}</p>
           </div>
         </article>`;
       }).join('')
-      : '<div style="padding:14px;color:#777">Nessun episodio disponibile.</div>';
+      : '<div style="padding:24px;color:#777">Nessun episodio disponibile.</div>';
     $('episodes-section').classList.remove('hidden');
-  } catch (e) { console.warn(e); $('episodes-grid').innerHTML = '<div style="padding:14px;color:#f66">Errore.</div>'; $('episodes-section').classList.remove('hidden'); }
+  } catch (e) { console.warn(e); $('episodes-grid').innerHTML = '<div style="padding:14px;color:#f66">Errore nel caricamento degli episodi.</div>'; $('episodes-section').classList.remove('hidden'); }
 }
 function selectEpisode(n, scroll = true) {
   currentEpisode = n;
@@ -563,6 +584,53 @@ function buildUrl() {
   return base + '?lang=it&language=it&audio=it&locale=it-IT';
 }
 
+// Player UI interval for updating elapsed time display
+let playerUIInterval = null;
+let playerIsPaused = false;
+let playerIdleTimer = null;
+
+function updatePlayerUI() {
+  const secs = currentWatchSeconds();
+  const prog = $('player-progress');
+  const time = $('player-time');
+  if (!prog || !time) return;
+  // Estimate total duration
+  let duration = 0;
+  if (currentDetail) {
+    const type = getType(currentDetail);
+    if (type === 'movie' && currentDetail.runtime) duration = currentDetail.runtime * 60;
+    else if (type === 'tv') {
+      const ep = currentEpisodes.find(e => e.episode_number === currentEpisode);
+      duration = (ep?.runtime || 45) * 60;
+    }
+  }
+  if (duration > 0) {
+    prog.max = duration;
+    prog.value = Math.min(secs, duration);
+    time.textContent = `${formatTime(secs)} / ${formatTime(duration)}`;
+  } else {
+    prog.max = 100; prog.value = 0;
+    time.textContent = formatTime(secs);
+  }
+  $('p-play').textContent = playerIsPaused ? '▶' : '⏸';
+}
+
+function startPlayerUI() {
+  stopPlayerUI();
+  playerUIInterval = setInterval(updatePlayerUI, 1000);
+  updatePlayerUI();
+}
+function stopPlayerUI() {
+  if (playerUIInterval) { clearInterval(playerUIInterval); playerUIInterval = null; }
+}
+
+function resetPlayerIdle() {
+  const ps = $('player-screen');
+  ps.classList.remove('idle');
+  clearTimeout(playerIdleTimer);
+  playerIdleTimer = setTimeout(() => ps.classList.add('idle'), 3500);
+}
+
 async function playSelected(resumeAt = 0) {
   if (!currentDetail) {
     if (currentHero) { await openDetail(currentHero.id, getType(currentHero), true); }
@@ -576,32 +644,42 @@ async function playSelected(resumeAt = 0) {
   let url = buildUrl();
   if (resumeAt > 0) url += `&t=${Math.floor(resumeAt)}`;
 
-  // Player fullscreen pulito — solo iframe, tasto ← per chiudere
   const ps = $('player-screen');
   $('player-title').textContent = getTitle(currentDetail);
   $('player-subtitle').textContent = getType(currentDetail) === 'tv' ? `S${currentSeason} · Ep ${currentEpisode || 1}` : 'Film';
   $('player-area').innerHTML = `<iframe src="${escA(url)}" allowfullscreen allow="autoplay; fullscreen; encrypted-media; picture-in-picture" referrerpolicy="origin" style="position:absolute;inset:0;width:100%;height:100%;border:0;background:#000"></iframe>`;
-  ps.classList.remove('hidden');
+  ps.classList.remove('hidden', 'idle');
   ps.setAttribute('aria-hidden', 'false');
   document.body.classList.add('no-scroll');
 
-  // Avvia timer progresso
+  playerIsPaused = false;
   watchBaseSeconds = Math.max(0, Math.floor(Number(resumeAt) || 0));
   startProgressTimer();
+  startPlayerUI();
+  resetPlayerIdle();
 
-  // Fullscreen automatico
-  if (ps.requestFullscreen) ps.requestFullscreen().catch(() => { });
+  // Idle on mousemove
+  ps.addEventListener('mousemove', resetPlayerIdle);
+  ps.addEventListener('touchstart', resetPlayerIdle, { passive: true });
+
+  if (ps.requestFullscreen) ps.requestFullscreen().catch(() => {});
 }
 
 async function closePlayer() {
   stopProgressTimer();
+  stopPlayerUI();
+  clearTimeout(playerIdleTimer);
   await commitProgress();
   watchBaseSeconds = 0;
+  playerIsPaused = false;
+  const ps = $('player-screen');
+  ps.removeEventListener('mousemove', resetPlayerIdle);
   $('player-area').innerHTML = '';
-  $('player-screen').classList.add('hidden');
-  $('player-screen').setAttribute('aria-hidden', 'true');
+  ps.classList.add('hidden');
+  ps.classList.remove('idle');
+  ps.setAttribute('aria-hidden', 'true');
   document.body.classList.remove('no-scroll');
-  if (document.fullscreenElement) document.exitFullscreen().catch(() => { });
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
 }
 
 // ─── MY LIST ─────────────────────────────────────────────────────────────────
@@ -632,11 +710,16 @@ function bindEvents() {
     const card = e.target.closest('.card,.search-item');
     if (card && card.dataset.id) { await openDetail(Number(card.dataset.id), card.dataset.type); return; }
 
-    // Play episodio
-    const epPlay = e.target.closest('[data-episode-play]');
-    if (epPlay) { e.stopPropagation(); selectEpisode(Number(epPlay.dataset.episodePlay), false); await playSelected(); return; }
+    // Play episodio — click sul cerchio play
+    const epPlay = e.target.closest('.episode-play');
+    if (epPlay) {
+      e.stopPropagation();
+      const epCard2 = epPlay.closest('.episode-card');
+      if (epCard2) { selectEpisode(Number(epCard2.dataset.episode), false); await playSelected(); }
+      return;
+    }
 
-    // Seleziona episodio
+    // Seleziona episodio (click card)
     const epCard = e.target.closest('.episode-card');
     if (epCard) { selectEpisode(Number(epCard.dataset.episode)); return; }
 
@@ -684,8 +767,50 @@ function bindEvents() {
   $('tab-register').addEventListener('click', () => setAuthMode('register'));
   $('auth-form').addEventListener('submit', handleAuth);
 
-  // Player
+  // Player controls
   $('player-close').addEventListener('click', closePlayer);
+  $('p-play').addEventListener('click', () => {
+    // Toggle pause/resume for our timer (doesn't affect iframe)
+    if (playerIsPaused) {
+      playerIsPaused = false;
+      startProgressTimer();
+      startPlayerUI();
+      $('p-play').textContent = '⏸';
+    } else {
+      playerIsPaused = true;
+      stopProgressTimer();
+      stopPlayerUI();
+      $('p-play').textContent = '▶';
+    }
+  });
+  $('p-back10').addEventListener('click', async () => {
+    watchBaseSeconds = Math.max(0, currentWatchSeconds() - 10);
+    watchStartTime = Date.now();
+    // Reopen iframe at new time
+    const url = buildUrl() + `&t=${Math.floor(watchBaseSeconds)}`;
+    $('player-area').innerHTML = `<iframe src="${escA(url)}" allowfullscreen allow="autoplay; fullscreen; encrypted-media; picture-in-picture" referrerpolicy="origin" style="position:absolute;inset:0;width:100%;height:100%;border:0;background:#000"></iframe>`;
+    updatePlayerUI();
+  });
+  $('p-forward10').addEventListener('click', async () => {
+    watchBaseSeconds = currentWatchSeconds() + 10;
+    watchStartTime = Date.now();
+    const url = buildUrl() + `&t=${Math.floor(watchBaseSeconds)}`;
+    $('player-area').innerHTML = `<iframe src="${escA(url)}" allowfullscreen allow="autoplay; fullscreen; encrypted-media; picture-in-picture" referrerpolicy="origin" style="position:absolute;inset:0;width:100%;height:100%;border:0;background:#000"></iframe>`;
+    updatePlayerUI();
+  });
+  $('p-fullscreen').addEventListener('click', () => {
+    const ps = $('player-screen');
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else ps.requestFullscreen().catch(() => {});
+  });
+  $('player-progress').addEventListener('change', e => {
+    const seekTo = Number(e.target.value);
+    watchBaseSeconds = seekTo;
+    watchStartTime = playerIsPaused ? 0 : Date.now();
+    const url = buildUrl() + `&t=${Math.floor(seekTo)}`;
+    $('player-area').innerHTML = `<iframe src="${escA(url)}" allowfullscreen allow="autoplay; fullscreen; encrypted-media; picture-in-picture" referrerpolicy="origin" style="position:absolute;inset:0;width:100%;height:100%;border:0;background:#000"></iframe>`;
+    updatePlayerUI();
+  });
   document.addEventListener('keydown', e => {
     if (!$('player-screen').classList.contains('hidden')) {
       if (e.key === 'Escape') closePlayer();
@@ -696,6 +821,8 @@ function bindEvents() {
   document.addEventListener('visibilitychange', () => { if (document.hidden) { stopProgressTimer(); commitProgress(); } else if (!$('player-screen').classList.contains('hidden')) { startProgressTimer(); } });
 
   $('season-tabs').addEventListener('click', e => { const b = e.target.closest('.season-tab'); if (b && currentDetail) loadSeason(currentDetail.id, Number(b.dataset.season)); });
+  const seasonSel = $('season-select');
+  if (seasonSel) seasonSel.addEventListener('change', e => { if (currentDetail) loadSeason(currentDetail.id, Number(e.target.value)); });
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
