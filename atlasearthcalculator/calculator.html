@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calcolatore Rendita Terreni</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent-color: #38bdf8;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            
+            /* Rarietà colori */
+            --comune: #cbd5e1;
+            --raro: #3b82f6;
+            --epico: #a855f7;
+            --leggendario: #eab308;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 30px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            text-align: center;
+            margin-bottom: 25px;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
+        }
+
+        .grid-inputs {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .input-group.comune label { color: var(--comune); }
+        .input-group.raro label { color: var(--raro); }
+        .input-group.epico label { color: var(--epico); }
+        .input-group.leggendario label { color: var(--leggendario); }
+
+        input[type="number"] {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            color: var(--text-color);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="number"]:focus {
+            border-color: var(--accent-color);
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        .control-label-wrapper {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent-color);
+            cursor: pointer;
+        }
+
+        .switch-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: var(--bg-color);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 30px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #64748b;
+            transition: .3s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px; width: 16px;
+            left: 4px; bottom: 4px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #10b981;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        .results {
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px dashed var(--border-color);
+        }
+
+        .result-row:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+
+        .result-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #10b981;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        
+        .result-value.sec {
+            font-size: 0.95rem;
+            color: var(--accent-color);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Land Yield Calculator</h1>
+    
+    <div class="section-title">I tuoi Terreni</div>
+    <div class="grid-inputs">
+        <div class="input-group comune">
+            <label>Comuni (0.000000011)</label>
+            <input type="number" id="comuni" value="50" min="0" oninput="calcola()">
+        </div>
+        <div class="input-group raro">
+            <label>Rari (0.000000016)</label>
+            <input type="number" id="rari" value="0" min="0" oninput="calcola()">
+        </div>
+        <div class="input-group epico">
+            <label>Epici (0.000000022)</label>
+            <input type="number" id="epici" value="0" min="0" oninput="calcola()">
+        </div>
+        <div class="input-group leggendario">
+            <label>Leggendari (0.000000044)</label>
+            <input type="number" id="leggendari" value="0" min="0" oninput="calcola()">
+        </div>
+    </div>
+
+    <div class="section-title">Configurazione Modificatori</div>
+    <div class="control-group">
+        <div class="control-label-wrapper">
+            <span>Durata Moltiplicatore x20:</span>
+            <span id="ore-val">12 ore</span>
+        </div>
+        <input type="range" id="ore_x20" min="0" max="24" value="12" oninput="aggiornaOre()">
+    </div>
+
+    <div class="switch-wrapper">
+        <span style="font-size: 0.95rem;">Aggiungi 5% del Guadagno Base</span>
+        <label class="switch">
+            <input type="checkbox" id="bonus_5" checked onchange="calcola()">
+            <span class="slider"></span>
+        </label>
+    </div>
+
+    <div class="section-title">Resoconto Guadagni Totali</div>
+    <div class="results">
+        <div class="result-row">
+            <span class="result-label">Base al secondo:</span>
+            <span class="result-value sec" id="res-sec">0.000000550 €/s</span>
+        </div>
+        <div class="result-row">
+            <span class="result-label">Al Giorno:</span>
+            <span class="result-value" id="res-giorno">0.00000 €</span>
+        </div>
+        <div class="result-row">
+            <span class="result-label">Al Mese:</span>
+            <span class="result-value" id="res-mese">0.00 €</span>
+        </div>
+        <div class="result-row">
+            <span class="result-label">All'Anno:</span>
+            <span class="result-value" id="res-anno">0.00 €</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Valori costanti di rendita al secondo
+    const VAL_COMUNE = 0.000000011;
+    const VAL_RARO = 0.000000016;
+    const VAL_EPICO = 0.000000022;
+    const VAL_LEGGENDARIO = 0.000000044;
+
+    function aggiornaOre() {
+        const ore = document.getElementById('ore_x20').value;
+        document.getElementById('ore-val').innerText = ore + " ore";
+        calcola();
+    }
+
+    function calcola() {
+        // Recupero quantità terreni (se vuoto imposta a 0)
+        const qtaComuni = parseFloat(document.getElementById('comuni').value) || 0;
+        const qtaRari = parseFloat(document.getElementById('rari').value) || 0;
+        const qtaEpici = parseFloat(document.getElementById('epici').value) || 0;
+        const qtaLeggendari = parseFloat(document.getElementById('leggendari').value) || 0;
+
+        // Recupero variabili modificatori
+        const oreX20 = parseInt(document.getElementById('ore_x20').value);
+        const applica5Pct = document.getElementById('bonus_5').checked;
+
+        // 1. Calcolo base totale al secondo della flotta
+        const baseAlSecondo = (qtaComuni * VAL_COMUNE) + 
+                              (qtaRari * VAL_RARO) + 
+                              (qtaEpici * VAL_EPICO) + 
+                              (qtaLeggendari * VAL_LEGGENDARIO);
+
+        // Mostra la base al secondo formattata a 9 decimali
+        document.getElementById('res-sec').innerText = baseAlSecondo.toFixed(9) + " €/s";
+
+        // 2. Calcolo dei secondi delle due fasce orarie
+        const oreNormali = 24 - oreX20;
+        const secondiNormali = oreNormali * 3600;
+        const secondiX20 = oreX20 * 3600;
+
+        // 3. Calcolo guadagno giornaliero combinato
+        const guadagnoNormali = secondiNormali * baseAlSecondo;
+        const guadagnoX20 = secondiX20 * (baseAlSecondo * 20);
+        let totaleGiorno = guadagnoNormali + guadagnoX20;
+
+        // 4. Aggiunta eventuale del 5% della base di 24 ore
+        if (applica5Pct) {
+            const baseInteraGiornata = 86400 * baseAlSecondo;
+            totaleGiorno += (baseInteraGiornata * 0.05);
+        }
+
+        // 5. Proiezioni temporali (mese medio = 30.41 giorni)
+        const totaleMese = totaleGiorno * 30.41;
+        const totaleAnno = totaleGiorno * 365;
+
+        // Output a schermo dinamico con precisione decimale corretta
+        document.getElementById('res-giorno').innerText = totaleGiorno.toFixed(5) + " €";
+        document.getElementById('res-mese').innerText = totaleMese.toFixed(2) + " €";
+        document.getElementById('res-anno').innerText = totaleAnno.toFixed(2) + " €";
+    }
+
+    // Esegui un primo calcolo all'avvio della pagina
+    calcola();
+</script>
+
+</body>
+</html>

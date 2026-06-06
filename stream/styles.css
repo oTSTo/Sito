@@ -974,8 +974,8 @@ img {
 .detail-gradient {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, #070707 0%, rgba(7,7,7,.96) 28%, rgba(7,7,7,.6) 58%, rgba(7,7,7,.12) 100%),
-              linear-gradient(180deg, rgba(7,7,7,0) 48%, #070707 100%)
+  background: linear-gradient(90deg, #070707 0%, rgba(7, 7, 7, .96) 28%, rgba(7, 7, 7, .6) 58%, rgba(7, 7, 7, .12) 100%),
+    linear-gradient(180deg, rgba(7, 7, 7, 0) 48%, #070707 100%)
 }
 
 .detail-body {
@@ -1059,7 +1059,10 @@ img {
   min-width: 140px
 }
 
-.season-select:focus { outline: none; border-color: #fff }
+.season-select:focus {
+  outline: none;
+  border-color: #fff
+}
 
 .season-tabs {
   display: none
@@ -1086,7 +1089,7 @@ img {
 
 .episode-card:hover,
 .episode-card.active {
-  background: rgba(255,255,255,.06)
+  background: rgba(255, 255, 255, .06)
 }
 
 .episode-num {
@@ -1099,7 +1102,9 @@ img {
   width: 48px
 }
 
-.episode-card.active .episode-num { color: #fff }
+.episode-card.active .episode-num {
+  color: #fff
+}
 
 .episode-thumb {
   position: relative;
@@ -1117,7 +1122,9 @@ img {
   transition: transform .2s
 }
 
-.episode-card:hover .episode-thumb img { transform: scale(1.04) }
+.episode-card:hover .episode-thumb img {
+  transform: scale(1.04)
+}
 
 .episode-play {
   position: absolute;
@@ -1125,13 +1132,15 @@ img {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0,0,0,.4);
+  background: rgba(0, 0, 0, .4);
   opacity: 0;
   transition: opacity .18s
 }
 
 .episode-card:hover .episode-play,
-.episode-card.active .episode-play { opacity: 1 }
+.episode-card.active .episode-play {
+  opacity: 1
+}
 
 .episode-play-icon {
   width: 44px;
@@ -1139,7 +1148,7 @@ img {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: rgba(255,255,255,.9);
+  background: rgba(255, 255, 255, .9);
   color: #000;
   font-size: 1.1rem;
   font-weight: 900
@@ -1151,7 +1160,7 @@ img {
   left: 0;
   right: 0;
   height: 3px;
-  background: rgba(255,255,255,.2)
+  background: rgba(255, 255, 255, .2)
 }
 
 .episode-ep-bar span {
@@ -1666,6 +1675,7 @@ img {
     grid-template-columns: 1fr
   }
 }
+
 /* SC-CARD-LOGO — logo sovrapposto alla card stile StreamingCommunity */
 .card-logo-layer {
   position: absolute !important;
@@ -1679,14 +1689,16 @@ img {
   justify-content: flex-start !important;
   pointer-events: none !important;
 }
+
 .card-logo-img {
   display: block !important;
   max-width: 72% !important;
   max-height: 56px !important;
   object-fit: contain !important;
   object-position: left center !important;
-  filter: drop-shadow(0 5px 12px rgba(0,0,0,.9)) !important;
+  filter: drop-shadow(0 5px 12px rgba(0, 0, 0, .9)) !important;
 }
+
 .card-logo-text {
   color: #fff !important;
   font-size: clamp(14px, 1.2vw, 24px) !important;
@@ -1695,21 +1707,29 @@ img {
   max-width: 80% !important;
   letter-spacing: -.04em !important;
   text-transform: uppercase !important;
-  text-shadow: 0 4px 14px rgba(0,0,0,.95) !important;
+  text-shadow: 0 4px 14px rgba(0, 0, 0, .95) !important;
   display: -webkit-box !important;
   -webkit-line-clamp: 2 !important;
   -webkit-box-orient: vertical !important;
   overflow: hidden !important;
 }
+
 .card:hover .card-logo-layer {
   transform: translateY(-50%) scale(1.02) !important;
 }
+
 .card .card-overlay {
   display: none !important;
 }
+
 @media (max-width: 799px) {
-  .card-logo-layer { display: none !important; }
-  .card .card-overlay { display: block !important; }
+  .card-logo-layer {
+    display: none !important;
+  }
+
+  .card .card-overlay {
+    display: block !important;
+  }
 }
 
 /* CONTINUE — pulsante × rimuovi per singolo item */
@@ -1720,8 +1740,8 @@ img {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: rgba(0,0,0,.68);
-  border: 1px solid rgba(255,255,255,.22);
+  background: rgba(0, 0, 0, .68);
+  border: 1px solid rgba(255, 255, 255, .22);
   color: #fff;
   font-size: 16px;
   line-height: 1;
@@ -1733,18 +1753,26 @@ img {
   opacity: 0;
   transition: opacity .16s, background .16s;
 }
+
 .continue-card:hover .continue-remove {
   opacity: 1;
 }
+
 .continue-remove:hover {
-  background: rgba(229,9,20,.7) !important;
-  border-color: rgba(229,9,20,.8) !important;
+  background: rgba(229, 9, 20, .7) !important;
+  border-color: rgba(229, 9, 20, .8) !important;
 }
 
 @media (max-width: 540px) {
   .episode-card {
-    grid-template-columns: 30px minmax(0,1fr);
+    grid-template-columns: 30px minmax(0, 1fr);
   }
-  .episode-thumb { display: none; }
-  .episode-body { padding: 0 8px; }
+
+  .episode-thumb {
+    display: none;
+  }
+
+  .episode-body {
+    padding: 0 8px;
+  }
 }

@@ -662,7 +662,7 @@ async function playSelected(resumeAt = 0) {
   ps.addEventListener('mousemove', resetPlayerIdle);
   ps.addEventListener('touchstart', resetPlayerIdle, { passive: true });
 
-  if (ps.requestFullscreen) ps.requestFullscreen().catch(() => {});
+  if (ps.requestFullscreen) ps.requestFullscreen().catch(() => { });
 }
 
 async function closePlayer() {
@@ -679,7 +679,7 @@ async function closePlayer() {
   ps.classList.remove('idle');
   ps.setAttribute('aria-hidden', 'true');
   document.body.classList.remove('no-scroll');
-  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => { });
 }
 
 // ─── MY LIST ─────────────────────────────────────────────────────────────────
@@ -800,8 +800,8 @@ function bindEvents() {
   });
   $('p-fullscreen').addEventListener('click', () => {
     const ps = $('player-screen');
-    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    else ps.requestFullscreen().catch(() => {});
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => { });
+    else ps.requestFullscreen().catch(() => { });
   });
   $('player-progress').addEventListener('change', e => {
     const seekTo = Number(e.target.value);
