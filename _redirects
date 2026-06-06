@@ -2,5 +2,6 @@
 /stream/        /stream/stream.html    200
 /dashboard      /dashboard/index.html  200
 /dashboard/*    /dashboard/index.html  200
+/atlascalculator      /atlasearthcalculator/calculator.html  200
 /__/auth/*      https://ichat-000.firebaseapp.com/__/auth/:splat 200
 /__/firebase/*  https://ichat-000.firebaseapp.com/__/firebase/:splat 200
