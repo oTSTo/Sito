@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Azienda Badge NFC — Dashboard v10</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+
+  <!-- LOGIN SCREEN (fullscreen, shown when not authenticated) -->
+  <div id="loginScreen" class="login-screen">
+    <div class="login-card">
+      <h2>Accedi</h2>
+      <p class="muted">Inserisci le credenziali amministratore Firebase.</p>
+      <div class="field">
+        <label>Email</label>
+        <input id="email" type="email" placeholder="admin@test.it" autocomplete="email" />
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input id="password" type="password" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <button id="loginBtn" class="btn primary full">Accedi</button>
+      <div id="loginError" class="error"></div>
+      <p class="muted small">Il terminale Android usa autenticazione anonima separata.</p>
+    </div>
+  </div>
+
+  <!-- MAIN APP (hidden until login) -->
+  <div id="appShell" class="layout hidden">
+    <aside class="sidebar" id="sidebar">
+
+      <div class="nav-group">
+        <span class="nav-label">Panoramica</span>
+        <button class="nav active" data-view="home">
+          <span class="nav-icon">⌂</span> Home
+        </button>
+        <button class="nav" data-view="presenze">
+          <span class="nav-icon">◉</span> Dipendenti live
+        </button>
+      </div>
+
+      <div class="nav-group">
+        <span class="nav-label">Gestione</span>
+        <button class="nav" data-view="dipendenti">
+          <span class="nav-icon">✦</span> Dipendenti
+        </button>
+        <button class="nav" data-view="badge">
+          <span class="nav-icon">◈</span> Badge NFC
+        </button>
+        <button class="nav" data-view="terminali">
+          <span class="nav-icon">▣</span> Terminali
+        </button>
+      </div>
+
+      <div class="nav-group">
+        <span class="nav-label">Dati</span>
+        <button class="nav" data-view="storico">
+          <span class="nav-icon">≡</span> Storico accessi
+        </button>
+        <button class="nav" data-view="demo">
+          <span class="nav-icon">⚡</span> Modalità demo
+        </button>
+      </div>
+
+      <div class="sidebar-bottom">
+        <div id="userBox" class="user-box">
+          <span class="user-dot"></span>
+          <span id="userEmail" class="muted">Non connesso</span>
+        </div>
+        <button id="logoutBtn" class="btn ghost">Esci</button>
+      </div>
+
+    </aside>
+
+    <main class="main" id="app">
+      <header class="top">
+        <div class="top-left">
+          <h2 id="pageTitle">Home</h2>
+          <p id="pageSub" class="muted">Panoramica generale del sistema.</p>
+        </div>
+        <div class="top-right">
+          <span id="conn" class="pill ok">Firebase</span>
+        </div>
+      </header>
+
+      <!-- HOME -->
+      <section id="home" class="view active">
+        <div class="cards">
+          <div class="card stat"><span>Dipendenti</span><strong id="hDip">0</strong></div>
+          <div class="card stat accent-blue"><span>Badge attivi</span><strong id="hBadgeAttivi">0</strong></div>
+          <div class="card stat accent-red"><span>Badge bloccati</span><strong id="hBadgeBloccati">0</strong></div>
+          <div class="card stat accent-green"><span>Accessi oggi</span><strong id="hAccessiOggi">0</strong></div>
+          <div class="card stat"><span>Entrate oggi</span><strong id="hEntrate">0</strong></div>
+          <div class="card stat"><span>Uscite oggi</span><strong id="hUscite">0</strong></div>
+          <div class="card stat accent-yellow"><span>Ritardi oggi</span><strong id="hRitardi">0</strong></div>
+          <div class="card stat accent-yellow"><span>Penalità simulate</span><strong id="hPenalita">0h</strong></div>
+        </div>
+        <div class="grid2">
+          <div class="card"><h3>Ultime timbrature</h3><div id="homeRecent" class="list"></div></div>
+          <div class="card"><h3>Stato demo</h3><div id="homeDemo" class="demoBox"></div></div>
+        </div>
+      </section>
+
+      <!-- PRESENZE LIVE -->
+      <section id="presenze" class="view">
+        <div class="section-head">
+          <div>
+            <h3>Dipendenti live</h3>
+            <p class="muted">Chi è dentro, chi è uscito, da quanto sta lavorando.</p>
+          </div>
+          <span id="presenzeClock" class="pill">Aggiornamento live</span>
+        </div>
+        <div id="employeeCards" class="employee-grid"></div>
+      </section>
+
+      <!-- DIPENDENTI -->
+      <section id="dipendenti" class="view">
+        <div class="card note-box"><b>Orario con pausa:</b> esempio 08:00–12:00 e 13:00–17:00. La pausa non viene conteggiata nelle ore lavorate.</div>
+        <div class="card">
+          <h3 class="card-title">Nuovo / modifica dipendente</h3>
+          <div class="formgrid">
+            <div class="field"><label>ID dipendente</label><input id="dipId" placeholder="DIP001" /></div>
+            <div class="field"><label>Nome</label><input id="dipNome" placeholder="Thomas" /></div>
+            <div class="field"><label>Cognome</label><input id="dipCognome" placeholder="Bravin" /></div>
+            <div class="field"><label>Reparto</label><input id="dipReparto" placeholder="Informatica" /></div>
+            <div class="field"><label>Ruolo</label><input id="dipRuolo" placeholder="Tecnico" /></div>
+            <div class="field"><label>Stato</label><select id="dipStato"><option value="attivo">Attivo</option><option value="sospeso">Sospeso</option></select></div>
+            <div class="field"><label>Mattina da</label><input id="dipInizio" value="08:00" /></div>
+            <div class="field"><label>Mattina a / inizio pausa</label><input id="dipPausaInizio" value="12:00" /></div>
+            <div class="field"><label>Pomeriggio da / fine pausa</label><input id="dipPausaFine" value="13:00" /></div>
+            <div class="field"><label>Pomeriggio a</label><input id="dipFine" value="17:00" /></div>
+            <div class="field"><label>Tolleranza ritardo (min)</label><input id="dipTolleranza" type="number" value="5" /></div>
+            <div class="field"><label>Scatto penalità (min)</label><input id="dipSoglia" type="number" value="15" /></div>
+            <div class="field"><label>Paga oraria simulata (€)</label><input id="dipPaga" type="number" value="10" /></div>
+          </div>
+          <div class="actions">
+            <button id="saveDip" class="btn primary">Salva dipendente</button>
+            <button id="clearDip" class="btn ghost">Pulisci</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3 class="card-title">Dipendenti registrati</h3>
+          <div class="tablewrap"><table><thead><tr><th>ID</th><th>Nome</th><th>Reparto</th><th>Stato</th><th>Orario</th><th>Regole</th><th>Azioni</th></tr></thead><tbody id="dipTable"></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- BADGE -->
+      <section id="badge" class="view">
+        <div class="card">
+          <h3 class="card-title">Nuovo / modifica badge</h3>
+          <div class="formgrid">
+            <div class="field"><label>UID badge compatto</label><input id="bUid" placeholder="D63F001E" /></div>
+            <div class="field"><label>ID dipendente</label><input id="bDip" placeholder="DIP001" /></div>
+            <div class="field"><label>Stato badge</label><select id="bStato"><option value="attivo">Attivo</option><option value="bloccato">Bloccato</option><option value="smarrito">Smarrito</option></select></div>
+            <div class="field"><label>Tipo badge</label><input id="bTipo" value="MIFARE Classic 1K" /></div>
+            <div class="field wide"><label>Note</label><input id="bNote" placeholder="Badge demo esame" /></div>
+          </div>
+          <div class="actions">
+            <button id="saveBadge" class="btn primary">Salva badge</button>
+            <button id="clearBadge" class="btn ghost">Pulisci</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3 class="card-title">Badge registrati</h3>
+          <div class="tablewrap"><table><thead><tr><th>UID</th><th>Dipendente</th><th>Stato</th><th>Tipo</th><th>Ultimo uso</th><th>Azioni</th></tr></thead><tbody id="badgeTable"></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- STORICO -->
+      <section id="storico" class="view">
+        <div class="card filters">
+          <div class="field"><label>Dipendente</label><select id="fDip"><option value="">Tutti</option></select></div>
+          <div class="field"><label>Tipo</label><select id="fTipo"><option value="">Tutti</option><option value="entrata">Entrata</option><option value="uscita">Uscita</option><option value="negato">Negati</option></select></div>
+          <div class="field"><label>Esito</label><select id="fEsito"><option value="">Tutti</option><option value="consentito">Consentito</option><option value="negato">Negato</option></select></div>
+          <div class="field"><label>Cerca</label><input id="fSearch" placeholder="Nome, UID, motivo..." /></div>
+          <div class="filter-actions">
+            <button id="resetFilters" class="btn ghost">Reset filtri</button>
+            <button id="clearAllAccessi" class="btn danger">Pulisci tutto</button>
+          </div>
+        </div>
+        <div class="card simpleHistoryCard"><div id="accessiTable" class="historyList"></div></div>
+      </section>
+
+      <!-- TERMINALI -->
+      <section id="terminali" class="view">
+        <div class="card">
+          <h3 class="card-title">Terminali NFC</h3>
+          <div class="tablewrap"><table><thead><tr><th>ID</th><th>Nome</th><th>Punto accesso</th><th>Stato</th><th>Ultimo online</th><th>Ultimo UID</th><th>Ultima timbratura</th><th>Azioni</th></tr></thead><tbody id="terminaliTable"></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- DEMO -->
+      <section id="demo" class="view">
+        <div class="card">
+          <h3 class="card-title">Configurazione demo</h3>
+          <div class="switchrow">
+            <label class="switch"><input id="demoEnabled" type="checkbox"><span></span></label>
+            <strong>Abilita modalità demo</strong>
+            <span id="demoSaveStatus" class="autosave">Salvataggio automatico</span>
+          </div>
+          <div id="demoOptions" class="hidden">
+            <div class="formgrid two">
+              <div class="field"><label>Entrata</label><select id="demoEntrata"><option value="IN_ORARIO">Entrata in orario — 07:58</option><option value="RITARDO_LIEVE">Ritardo lieve — 08:12</option><option value="RITARDO_GRAVE">Ritardo grave — 08:35</option></select></div>
+              <div class="field"><label>Uscita</label><select id="demoUscita"><option value="REGOLARE">Uscita regolare — 17:00</option><option value="STRAORDINARIO">Uscita in ritardo / straordinario — 17:35</option><option value="ANTICIPATA">Uscita anticipata — 16:20</option></select></div>
+            </div>
+            <div id="demoPreview" class="preview"></div>
+            <div class="note-box" style="margin-top:14px">
+              <b>Come usarla all'esame:</b> attiva la modalità demo e scegli la combo. La dashboard salva automaticamente ogni modifica.<br>
+              1ª lettura = entrata, 2ª lettura = uscita.
+            </div>
+            <div class="actions">
+              <button id="resetPresenze" class="btn warning">Reset giro demo: prossima lettura = entrata</button>
+              <button id="forceUscita" class="btn ghost">Forza prossima lettura = uscita</button>
+            </div>
+          </div>
+          <div id="demoOffMessage" class="preview">Demo disattivata: le opzioni sono nascoste e l'app usa l'orario reale.</div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
