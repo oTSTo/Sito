@@ -41,3 +41,10 @@
 - Lo **Storico accessi** ora mostra solo le timbrature/accessi.
 - Il riepilogo paghe ha selezione mese, ricerca dipendente e pulsante **Esporta CSV mensile**.
 - Aggiunto storico automatico dei mesi disponibili: se nello storico accessi ci sono mesi precedenti, compaiono come card cliccabili.
+
+
+## Novità v14
+- Aggiunta favicon del sito nella scheda del browser.
+- File icona: `aziendabadge.ico`.
+- Collegamento aggiunto in `index.html`:
+  `<link rel="icon" href="./aziendabadge.ico" type="image/x-icon">`
