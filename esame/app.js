@@ -116,7 +116,7 @@ onAuthStateChanged(auth, async user=>{
 document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active')); b.classList.add('active');
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('active')); $(b.dataset.view).classList.add('active');
-  const titles={home:['Home','Panoramica generale del sistema.'],presenze:['Dipendenti live','Card visive di entrata/uscita e tempo di lavoro.'],dipendenti:['Dipendenti','Anagrafica, orari e regole di lavoro.'],badge:['Badge NFC','Associa badge NFC ai dipendenti.'],storico:['Storico accessi','Solo timbrature e accessi registrati.'],paghe:['Riepilogo paghe','Calcolo mensile ore, straordinari, penalità e totale da pagare.'],terminali:['Terminali','Gestione telefoni lettori NFC.'],demo:['Modalità demo','Switch per simulare combo entrata/uscita.']};
+  const titles={home:['Home','Panoramica generale del sistema.'],dipendenti:['Dipendenti','Anagrafica, orari e regole di lavoro.'],badge:['Badge NFC','Associa badge NFC ai dipendenti.'],storico:['Storico accessi','Solo timbrature e accessi registrati.'],paghe:['Riepilogo paghe','Calcolo mensile ore, straordinari, penalità e totale da pagare.'],terminali:['Terminali','Gestione telefoni lettori NFC.'],demo:['Modalità demo','Switch per simulare combo entrata/uscita.']};
   $('pageTitle').textContent=titles[b.dataset.view][0]; $('pageSub').textContent=titles[b.dataset.view][1];
 });
 

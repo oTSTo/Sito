@@ -48,3 +48,9 @@
 - File icona: `aziendabadge.ico`.
 - Collegamento aggiunto in `index.html`:
   `<link rel="icon" href="./aziendabadge.ico" type="image/x-icon">`
+
+
+## Novità v15
+- Rimossa la sezione **Dipendenti live** dal menu.
+- Rimossa la schermata con le card live dei dipendenti.
+- Restano disponibili Home, Dipendenti, Badge NFC, Storico accessi, Riepilogo paghe, Terminali e Modalità demo.
