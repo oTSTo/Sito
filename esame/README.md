@@ -34,3 +34,10 @@
 - Storico accessi: supporto a più cicli nello stesso giorno tramite `turnoIndex`.
 - Modalità demo: aggiunta `Data simulata`, così puoi simulare giorni diversi senza aspettare date reali.
 - Se ripeti più entrate/uscite nello stesso giorno, la dashboard mostra ciclo 1, ciclo 2, ecc.
+
+
+## Novità v13
+- Nuova sezione menu: **Riepilogo paghe**.
+- Lo **Storico accessi** ora mostra solo le timbrature/accessi.
+- Il riepilogo paghe ha selezione mese, ricerca dipendente e pulsante **Esporta CSV mensile**.
+- Aggiunto storico automatico dei mesi disponibili: se nello storico accessi ci sono mesi precedenti, compaiono come card cliccabili.

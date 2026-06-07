@@ -62,6 +62,9 @@
         <button class="nav" data-view="storico">
           <span class="nav-icon">≡</span> Storico accessi
         </button>
+        <button class="nav" data-view="paghe">
+          <span class="nav-icon">€</span> Riepilogo paghe
+        </button>
         <button class="nav" data-view="demo">
           <span class="nav-icon">⚡</span> Modalità demo
         </button>
@@ -180,17 +183,70 @@
           <div class="field"><label>Cerca</label><input id="fSearch" placeholder="Nome, UID, motivo..." /></div>
           <div class="filter-actions">
             <button id="resetFilters" class="btn ghost">Reset filtri</button>
-            <button id="exportCSV" class="btn primary">⬇ Esporta CSV mensile</button>
             <button id="clearAllAccessi" class="btn danger">Pulisci tutto</button>
           </div>
         </div>
 
-        <div class="card">
-          <h3 class="card-title">Riepilogo paghe ultimi 30 giorni</h3>
-          <p class="muted small">Calcolo dimostrativo: ore lavorate finali, paga oraria, straordinari +25%, penalità e totale da pagare.</p>
-          <div class="tablewrap"><table><thead><tr><th>Dipendente</th><th>Reparto</th><th>Giorni</th><th>Ore lavorate</th><th>Straordinari</th><th>Paga/h</th><th>Totale</th></tr></thead><tbody id="monthlyTable"></tbody></table></div>
-        </div>
         <div class="card simpleHistoryCard"><div id="accessiTable" class="historyList"></div></div>
+      </section>
+
+
+      <!-- RIEPILOGO PAGHE -->
+      <section id="paghe" class="view">
+        <div class="card filters payrollFilters">
+          <div class="field">
+            <label>Mese</label>
+            <select id="payMonthSelect"></select>
+          </div>
+          <div class="field">
+            <label>Cerca dipendente</label>
+            <input id="paySearch" placeholder="Nome, ID, reparto..." />
+          </div>
+          <div class="filter-actions">
+            <button id="exportCSV" class="btn primary">⬇ Esporta CSV mensile</button>
+          </div>
+        </div>
+
+        <div class="cards payrollTotals">
+          <div class="card stat"><span>Dipendenti</span><strong id="payTotDip">0</strong></div>
+          <div class="card stat accent-green"><span>Ore lavorate</span><strong id="payTotOre">0.00</strong></div>
+          <div class="card stat accent-blue"><span>Straordinari</span><strong id="payTotStraord">0.00</strong></div>
+          <div class="card stat accent-yellow"><span>Totale paghe</span><strong id="payTotEuro">€0</strong></div>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title">Riepilogo paghe mese selezionato</h3>
+          <p class="muted small">
+            Calcolo dimostrativo: ore lavorate finali, paga oraria, straordinari +25%, penalità e totale da pagare.
+          </p>
+          <div class="tablewrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Dipendente</th>
+                  <th>Reparto</th>
+                  <th>Giorni</th>
+                  <th>Ore lavorate</th>
+                  <th>Straordinari</th>
+                  <th>Paga/h</th>
+                  <th>Base</th>
+                  <th>Extra</th>
+                  <th>Penalità</th>
+                  <th>Totale</th>
+                </tr>
+              </thead>
+              <tbody id="monthlyTable"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title">Storico paghe mesi precedenti</h3>
+          <p class="muted small">
+            Qui trovi automaticamente i mesi presenti nello storico accessi. Se non ci sono timbrature in mesi precedenti, la lista resta vuota.
+          </p>
+          <div id="payHistoryList" class="payHistoryGrid"></div>
+        </div>
       </section>
 
       <!-- TERMINALI -->

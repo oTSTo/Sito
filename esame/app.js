@@ -116,7 +116,7 @@ onAuthStateChanged(auth, async user=>{
 document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active')); b.classList.add('active');
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('active')); $(b.dataset.view).classList.add('active');
-  const titles={home:['Home','Panoramica generale del sistema.'],presenze:['Dipendenti live','Card visive di entrata/uscita e tempo di lavoro.'],dipendenti:['Dipendenti','Anagrafica, orari e regole di lavoro.'],badge:['Badge NFC','Associa badge NFC ai dipendenti.'],storico:['Storico accessi','Turni accoppiati: entrata e uscita nella stessa riga.'],terminali:['Terminali','Gestione telefoni lettori NFC.'],demo:['Modalità demo','Switch per simulare combo entrata/uscita.']};
+  const titles={home:['Home','Panoramica generale del sistema.'],presenze:['Dipendenti live','Card visive di entrata/uscita e tempo di lavoro.'],dipendenti:['Dipendenti','Anagrafica, orari e regole di lavoro.'],badge:['Badge NFC','Associa badge NFC ai dipendenti.'],storico:['Storico accessi','Solo timbrature e accessi registrati.'],paghe:['Riepilogo paghe','Calcolo mensile ore, straordinari, penalità e totale da pagare.'],terminali:['Terminali','Gestione telefoni lettori NFC.'],demo:['Modalità demo','Switch per simulare combo entrata/uscita.']};
   $('pageTitle').textContent=titles[b.dataset.view][0]; $('pageSub').textContent=titles[b.dataset.view][1];
 });
 
@@ -549,16 +549,37 @@ $('forceUscita').onclick=async()=>{ if(!confirm('Forzo prossima lettura = USCITA
 setInterval(()=>renderPresenzeCards(), 30000);
 fillDemo();
 
-// ─── RIEPILOGO MENSILE / CSV ────────────────────────────────────────────────
-function getMonthlySummary(){
-  const now = new Date();
-  const cutoff = new Date(now);
-  cutoff.setDate(cutoff.getDate() - 30);
-
-  const accMese = state.accessi.filter(a => {
-    const d = toDate(a.dataOra) || toDate(a.registratoIl);
-    return d && d >= cutoff;
+// ─── RIEPILOGO PAGHE / CSV ──────────────────────────────────────────────────
+function monthKeyFromDate(d){
+  if(!d) return '';
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function monthLabel(key){
+  if(!key) return '---';
+  const [y,m] = key.split('-').map(Number);
+  const d = new Date(y, m-1, 1);
+  return d.toLocaleDateString('it-IT', { month:'long', year:'numeric' });
+}
+function accessMonthKey(a){
+  const d = toDate(a.dataOra) || toDate(a.registratoIl);
+  return monthKeyFromDate(d);
+}
+function getAvailablePayMonths(){
+  const set = new Set();
+  state.accessi.forEach(a=>{
+    const k = accessMonthKey(a);
+    if(k) set.add(k);
   });
+  if(!set.size) set.add(monthKeyFromDate(new Date()));
+  return [...set].sort((a,b)=>b.localeCompare(a));
+}
+function selectedPayMonth(){
+  const sel = $('payMonthSelect');
+  if(sel && sel.value) return sel.value;
+  return getAvailablePayMonths()[0] || monthKeyFromDate(new Date());
+}
+function getMonthlySummary(monthKey = selectedPayMonth()){
+  const accMese = state.accessi.filter(a => accessMonthKey(a) === monthKey);
 
   const dipData = new Map();
   for(const [id, d] of state.dip){
@@ -588,49 +609,110 @@ function getMonthlySummary(){
   }
   return [...dipData.values()];
 }
-
+function calculatePayRow(rec){
+  const oreBase = rec.minutiLavorati / 60;
+  const oreStraord = rec.minutiStraordinari / 60;
+  const pagaBase = oreBase * rec.pagaOraria;
+  const pagaStraord = oreStraord * rec.pagaOraria * 1.25;
+  const totale = Math.max(0, pagaBase + pagaStraord - rec.penalitaEuro);
+  return { oreBase, oreStraord, pagaBase, pagaStraord, totale };
+}
+function fillPayMonthSelect(){
+  const sel = $('payMonthSelect');
+  if(!sel) return;
+  const current = sel.value;
+  const months = getAvailablePayMonths();
+  sel.innerHTML = months.map(m => `<option value="${m}">${monthLabel(m)}</option>`).join('');
+  sel.value = months.includes(current) ? current : (months[0] || monthKeyFromDate(new Date()));
+}
 function renderMonthlySummary(){
+  fillPayMonthSelect();
+
   const body = $('monthlyTable');
   if(!body) return;
-  const rows = getMonthlySummary();
+
+  const q = ($('paySearch')?.value || '').toLowerCase().trim();
+  const monthKey = selectedPayMonth();
+  const rows = getMonthlySummary(monthKey).filter(rec => {
+    if(!q) return true;
+    return `${rec.id} ${rec.nome} ${rec.reparto}`.toLowerCase().includes(q);
+  });
+
+  let totDip = 0, totOre = 0, totStraord = 0, totEuro = 0;
   body.innerHTML = rows.map(rec=>{
-    const oreBase = rec.minutiLavorati / 60;
-    const oreStraord = rec.minutiStraordinari / 60;
-    const pagaBase = oreBase * rec.pagaOraria;
-    const pagaStraord = oreStraord * rec.pagaOraria * 1.25;
-    const totale = Math.max(0, pagaBase + pagaStraord - rec.penalitaEuro);
+    const p = calculatePayRow(rec);
+    totDip++;
+    totOre += p.oreBase;
+    totStraord += p.oreStraord;
+    totEuro += p.totale;
     return `<tr>
       <td><b>${rec.nome}</b><br><span class="muted">${rec.id}</span></td>
       <td>${rec.reparto}</td>
       <td>${rec.giorniLavorati.size}</td>
-      <td>${oreBase.toFixed(2)} h</td>
-      <td>${oreStraord.toFixed(2)} h</td>
+      <td>${p.oreBase.toFixed(2)} h</td>
+      <td>${p.oreStraord.toFixed(2)} h</td>
       <td>€ ${rec.pagaOraria.toFixed(2)}</td>
-      <td><b>€ ${totale.toFixed(2)}</b><br><span class="muted">base €${pagaBase.toFixed(2)} · straord. €${pagaStraord.toFixed(2)} · pen. €${rec.penalitaEuro.toFixed(2)}</span></td>
+      <td>€ ${p.pagaBase.toFixed(2)}</td>
+      <td>€ ${p.pagaStraord.toFixed(2)}</td>
+      <td>€ ${rec.penalitaEuro.toFixed(2)}</td>
+      <td><b>€ ${p.totale.toFixed(2)}</b></td>
     </tr>`;
-  }).join('') || '<tr><td colspan="7">Nessun dipendente.</td></tr>';
+  }).join('') || '<tr><td colspan="10">Nessun dato paghe per questo mese.</td></tr>';
+
+  if($('payTotDip')) $('payTotDip').textContent = String(totDip);
+  if($('payTotOre')) $('payTotOre').textContent = totOre.toFixed(2);
+  if($('payTotStraord')) $('payTotStraord').textContent = totStraord.toFixed(2);
+  if($('payTotEuro')) $('payTotEuro').textContent = '€' + totEuro.toFixed(2);
+
+  renderPayHistory();
+}
+function renderPayHistory(){
+  const box = $('payHistoryList');
+  if(!box) return;
+  const months = getAvailablePayMonths();
+  const current = selectedPayMonth();
+
+  box.innerHTML = months.map(m=>{
+    const rows = getMonthlySummary(m);
+    let ore = 0, straord = 0, totale = 0, giorni = 0;
+    rows.forEach(r=>{
+      const p = calculatePayRow(r);
+      ore += p.oreBase;
+      straord += p.oreStraord;
+      totale += p.totale;
+      giorni += r.giorniLavorati.size;
+    });
+    return `<button class="payMonthCard ${m===current?'active':''}" data-pay-month="${m}">
+      <span>${monthLabel(m)}</span>
+      <strong>€ ${totale.toFixed(2)}</strong>
+      <small>${ore.toFixed(2)} h · straord. ${straord.toFixed(2)} h · giorni ${giorni}</small>
+    </button>`;
+  }).join('') || '<div class="muted">Nessun mese disponibile.</div>';
+
+  document.querySelectorAll('[data-pay-month]').forEach(btn=>{
+    btn.onclick = () => {
+      if($('payMonthSelect')) $('payMonthSelect').value = btn.dataset.payMonth;
+      renderMonthlySummary();
+    };
+  });
 }
 
 // ─── ESPORTA CSV MENSILE ─────────────────────────────────────────────────────
 function exportMensileCSV(){
-  const now = new Date();
+  const monthKey = selectedPayMonth();
   const rows = [
-    ['ID','Nome','Reparto','Giorni lavorati','Ore lavorate','Ore straordinari','Paga oraria (€)','Retribuzione base (€)','Straordinari +25% (€)','Penalità (€)','TOTALE DA PAGARE (€)']
+    ['Mese','ID','Nome','Reparto','Giorni lavorati','Ore lavorate','Ore straordinari','Paga oraria (€)','Retribuzione base (€)','Straordinari +25% (€)','Penalità (€)','TOTALE DA PAGARE (€)']
   ];
 
-  for(const rec of getMonthlySummary()){
-    const oreBase = rec.minutiLavorati / 60;
-    const oreStraord = rec.minutiStraordinari / 60;
-    const pagaBase = oreBase * rec.pagaOraria;
-    const pagaStraord = oreStraord * rec.pagaOraria * 1.25;
-    const totale = Math.max(0, pagaBase + pagaStraord - rec.penalitaEuro);
+  for(const rec of getMonthlySummary(monthKey)){
+    const p = calculatePayRow(rec);
     rows.push([
-      rec.id, rec.nome, rec.reparto,
+      monthLabel(monthKey), rec.id, rec.nome, rec.reparto,
       rec.giorniLavorati.size,
-      oreBase.toFixed(2), oreStraord.toFixed(2),
-      '€ ' + rec.pagaOraria.toFixed(2), '€ ' + pagaBase.toFixed(2),
-      '€ ' + pagaStraord.toFixed(2), '€ ' + rec.penalitaEuro.toFixed(2),
-      '€ ' + totale.toFixed(2)
+      p.oreBase.toFixed(2), p.oreStraord.toFixed(2),
+      '€ ' + rec.pagaOraria.toFixed(2), '€ ' + p.pagaBase.toFixed(2),
+      '€ ' + p.pagaStraord.toFixed(2), '€ ' + rec.penalitaEuro.toFixed(2),
+      '€ ' + p.totale.toFixed(2)
     ]);
   }
 
@@ -638,14 +720,19 @@ function exportMensileCSV(){
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
-  const dateStr = now.toISOString().slice(0,10);
   link.href = url;
-  link.download = `paghe_mensili_${dateStr}.csv`;
+  link.download = `paghe_mensili_${monthKey}.csv`;
   link.click();
   URL.revokeObjectURL(url);
-  toast('CSV esportato: paghe_mensili_' + dateStr + '.csv');
+  toast('CSV esportato: paghe_mensili_' + monthKey + '.csv');
 }
 
 document.addEventListener('click', e => {
   if(e.target && e.target.id === 'exportCSV') exportMensileCSV();
+});
+document.addEventListener('input', e => {
+  if(e.target && e.target.id === 'paySearch') renderMonthlySummary();
+});
+document.addEventListener('change', e => {
+  if(e.target && e.target.id === 'payMonthSelect') renderMonthlySummary();
 });
