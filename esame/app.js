@@ -300,16 +300,44 @@ function accessSimpleBlock(a, type){
   if(!a){
     return `<div class="histTime empty"><span>${label}</span><strong>---</strong><small>Non registrata</small></div>`;
   }
-  const extra = type === 'entrata'
-    ? `Ritardo ${a.ritardoMinuti || 0} min`
-    : type === 'uscita'
-      ? `Anticipo ${a.uscitaAnticipataMinuti || 0} min · Straord. ${a.straordinarioMinuti || 0} min`
-      : (a.motivo || a.esito || '---');
+
+  let extraLines = [];
+  let badgeTags = '';
+
+  if(type === 'entrata'){
+    const ritardo = Number(a.ritardoMinuti || 0);
+    const penMin = penaltyMinutes(a);
+    const penEuro = penaltyEuro(a);
+    if(ritardo > 0){
+      extraLines.push(`Ritardo: ${ritardo} min`);
+      badgeTags += `<span class="histBadge penalty">⚠ Penalità ${minutesToHM(penMin)}${penEuro>0?' · €'+penEuro.toFixed(2):''}</span>`;
+    } else {
+      extraLines.push('In orario');
+    }
+  } else if(type === 'uscita'){
+    const anticipo = Number(a.uscitaAnticipataMinuti || 0);
+    const straord = Number(a.straordinarioMinuti || 0);
+    const penMin = penaltyMinutes(a);
+    const penEuro = penaltyEuro(a);
+    if(anticipo > 0){
+      extraLines.push(`Uscita anticipata: ${anticipo} min`);
+      badgeTags += `<span class="histBadge penalty">⚠ Penalità ${minutesToHM(penMin)}${penEuro>0?' · €'+penEuro.toFixed(2):''}</span>`;
+    } else if(straord > 0){
+      extraLines.push(`Uscita regolare`);
+      badgeTags += `<span class="histBadge overtime">★ Straordinari ${minutesToHM(straord)}</span>`;
+    } else {
+      extraLines.push('Uscita regolare');
+    }
+  } else {
+    extraLines.push(a.motivo || a.esito || '---');
+  }
+
   const cls = type === 'entrata' ? 'entry' : type === 'uscita' ? 'exit' : 'denied';
   return `<div class="histTime ${cls}">
     <div class="histTimeTop"><span>${label}</span><button class="plainX" data-del-accesso="${a.id}" title="Elimina timbratura">×</button></div>
     <strong>${a.oraRegistrata || fmtDate(a.dataOra)}</strong>
-    <small>Prevista ${a.oraPrevista || '---'} · ${extra}</small>
+    <small>Prevista ${a.oraPrevista || '---'} · ${extraLines.join(' · ')}</small>
+    ${badgeTags}
   </div>`;
 }
 
@@ -427,3 +455,76 @@ $('resetPresenze').onclick=async()=>{ if(!confirm('Resetto tutte le presenze gio
 $('forceUscita').onclick=async()=>{ if(!confirm('Forzo tutte le presenze: la prossima lettura sarà USCITA?')) return; await forceNextTimbratura('uscita'); toast('Prossima lettura impostata su USCITA'); };
 setInterval(()=>renderPresenzeCards(), 30000);
 fillDemo();
+
+// ─── ESPORTA CSV MENSILE ─────────────────────────────────────────────────────
+function exportMensileCSV(){
+  const now = new Date();
+  const cutoff = new Date(now);
+  cutoff.setDate(cutoff.getDate() - 30);
+
+  const accMese = state.accessi.filter(a => {
+    const d = toDate(a.dataOra);
+    return d && d >= cutoff;
+  });
+
+  const dipData = new Map();
+  for(const [id, d] of state.dip){
+    dipData.set(id, {
+      id,
+      nome: `${d.nome||''} ${d.cognome||''}`.trim() || id,
+      reparto: d.reparto || '---',
+      pagaOraria: Number(d.pagaOrariaSimulata || 10),
+      minutiLavorati: 0,
+      minutiStraordinari: 0,
+      penalitaEuro: 0,
+      giorniLavorati: new Set()
+    });
+  }
+
+  for(const a of accMese){
+    const rec = dipData.get(a.idDipendente);
+    if(!rec) continue;
+    const dateKey = accessDateKey(a);
+    if(a.tipoTimbratura === 'uscita' && a.esito === 'consentito'){
+      rec.minutiLavorati += Number(a.oreLavorateMinuti || 0);
+      rec.minutiStraordinari += Number(a.straordinarioMinuti || 0);
+      if(dateKey !== 'senza-data') rec.giorniLavorati.add(dateKey);
+    }
+    rec.penalitaEuro += penaltyEuro(a);
+  }
+
+  const rows = [
+    ['ID','Nome','Reparto','Giorni lavorati','Ore lavorate','Ore straordinari','Paga oraria (€)','Retribuzione base (€)','Straordinari +25% (€)','Penalità (€)','TOTALE DA PAGARE (€)']
+  ];
+
+  for(const rec of dipData.values()){
+    const oreBase = rec.minutiLavorati / 60;
+    const oreStraord = rec.minutiStraordinari / 60;
+    const pagaBase = oreBase * rec.pagaOraria;
+    const pagaStraord = oreStraord * rec.pagaOraria * 1.25;
+    const totale = Math.max(0, pagaBase + pagaStraord - rec.penalitaEuro);
+    rows.push([
+      rec.id, rec.nome, rec.reparto,
+      rec.giorniLavorati.size,
+      oreBase.toFixed(2), oreStraord.toFixed(2),
+      rec.pagaOraria.toFixed(2), pagaBase.toFixed(2),
+      pagaStraord.toFixed(2), rec.penalitaEuro.toFixed(2),
+      totale.toFixed(2)
+    ]);
+  }
+
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  const dateStr = now.toISOString().slice(0,10);
+  link.href = url;
+  link.download = `paghe_mensili_${dateStr}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+  toast('CSV esportato: paghe_mensili_' + dateStr + '.csv');
+}
+
+document.addEventListener('click', e => {
+  if(e.target && e.target.id === 'exportCSV') exportMensileCSV();
+});

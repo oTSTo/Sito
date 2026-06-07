@@ -405,6 +405,9 @@ tr:last-child td { border-bottom: none; }
 .histTime span   { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted2); font-weight: 700; }
 .histTime strong { display: block; font-size: 19px; font-weight: 900; margin: 4px 0 2px; font-family: 'DM Mono', monospace; }
 .histTime small  { color: var(--muted2); font-size: 12px; }
+.histBadge { display: inline-block; margin-top: 5px; padding: 2px 7px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+.histBadge.penalty  { background: rgba(220,60,60,.18); color: #e07070; border: 1px solid rgba(220,60,60,.35); }
+.histBadge.overtime { background: rgba(60,180,100,.18); color: #5ec97a; border: 1px solid rgba(60,180,100,.35); }
 
 .plainX {
   width: 21px; height: 21px; border: 0; border-radius: 5px;
