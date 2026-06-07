@@ -507,9 +507,9 @@ function exportMensileCSV(){
       rec.id, rec.nome, rec.reparto,
       rec.giorniLavorati.size,
       oreBase.toFixed(2), oreStraord.toFixed(2),
-      rec.pagaOraria.toFixed(2), pagaBase.toFixed(2),
-      pagaStraord.toFixed(2), rec.penalitaEuro.toFixed(2),
-      totale.toFixed(2)
+      '€ ' + rec.pagaOraria.toFixed(2), '€ ' + pagaBase.toFixed(2),
+      '€ ' + pagaStraord.toFixed(2), '€ ' + rec.penalitaEuro.toFixed(2),
+      '€ ' + totale.toFixed(2)
     ]);
   }
 
