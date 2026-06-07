@@ -28,3 +28,9 @@
 - Riepilogo paghe ultimi 30 giorni visibile in dashboard.
 - Esporta CSV mensile con ore lavorate, paga oraria, straordinari, penalità e totale.
 - Evidenzia penalità su ritardi/uscite anticipate e straordinari su uscita oltre orario.
+
+
+## Novità v12
+- Storico accessi: supporto a più cicli nello stesso giorno tramite `turnoIndex`.
+- Modalità demo: aggiunta `Data simulata`, così puoi simulare giorni diversi senza aspettare date reali.
+- Se ripeti più entrate/uscite nello stesso giorno, la dashboard mostra ciclo 1, ciclo 2, ecc.

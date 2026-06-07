@@ -8,7 +8,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const $ = id => document.getElementById(id);
 
-const state = { user:null, dip:new Map(), badge:new Map(), accessi:[], terminali:new Map(), presenze:new Map(), demo:{enabled:false,entrataScenario:'IN_ORARIO',uscitaScenario:'REGOLARE'}, unsubs:[] };
+const state = { user:null, dip:new Map(), badge:new Map(), accessi:[], terminali:new Map(), presenze:new Map(), demo:{enabled:false,entrataScenario:'IN_ORARIO',uscitaPranzoScenario:'USCITA_PRANZO',entrataPomScenario:'ENTRATA_POMERIGGIO',uscitaScenario:'REGOLARE',demoDate:''}, unsubs:[] };
 
 function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.remove('hidden'); setTimeout(()=>t.classList.add('hidden'),2600); }
 function cleanUid(v){ return String(v||'').replaceAll(':','').replaceAll(' ','').trim().toUpperCase(); }
@@ -142,7 +142,7 @@ function renderHome(){
   $('hRitardi').textContent=today.filter(a=>Number(a.ritardoMinuti||0)>0).length;
   $('hPenalita').textContent=minutesToHM(today.reduce((sum,a)=>sum+penaltyMinutes(a),0));
   $('homeRecent').innerHTML=state.accessi.slice().sort((a,b)=>accessSortDate(b)-accessSortDate(a)).slice(0,8).map(a=>`<div class="listitem"><strong>${a.nomeCompleto||a.uid} ${pill(a.tipoTimbratura)} ${pill(a.esito)}</strong><span>${fmtDate(a.dataOra)} · ${a.motivo||'---'} · ritardo ${a.ritardoMinuti||0} min · penalità ${minutesToHM(penaltyMinutes(a))}</span></div>`).join('') || '<div class="muted">Nessuna timbratura.</div>';
-  $('homeDemo').innerHTML=`<strong>${state.demo.enabled?'Demo ATTIVA':'Demo disattivata'}</strong><br>Entrata: ${labelScenario(state.demo.entrataScenario)}<br>Uscita: ${labelScenario(state.demo.uscitaScenario)}<br><br><span class="muted">Con app v0.5.x: 1ª lettura = entrata, 2ª lettura = uscita.</span>`;
+  $('homeDemo').innerHTML=`<strong>${state.demo.enabled?'Demo ATTIVA':'Demo disattivata'}</strong><br>Entrata: ${labelScenario(state.demo.entrataScenario)}<br>Uscita: ${labelScenario(state.demo.uscitaScenario)}<br><br><span class="muted">Con app v0.8.0: ciclo 4 timbrature e data demo simulabile.</span>`;
 }
 
 
@@ -255,23 +255,93 @@ function accessSortDate(a){
   return toDate(a?.registratoIl) || toDate(a?.dataOra) || new Date(0);
 }
 
-// Raggruppa gli accessi in giornate con 4 slot: [entrata_mat, uscita_pranzo, entrata_pom, uscita_sera]
+// Raggruppa gli accessi in cicli/giornate con 4 slot:
+// entrata mattina, uscita pranzo, entrata pomeriggio, uscita sera.
+// Se lo stesso dipendente fa più cicli nello stesso giorno, ora vengono mostrati separati.
 function buildDayGroups(rows){
   const groups = new Map();
+
   rows.forEach(a=>{
-    const key = `${a.idDipendente || 'sconosciuto'}|${accessDateKey(a)}`;
-    if(!groups.has(key)) groups.set(key, { idDipendente: a.idDipendente || 'sconosciuto', dataOperativa: accessDateKey(a), rows: [] });
+    const isDenied = a.tipoTimbratura === 'negato' || a.esito === 'negato';
+    const baseKey = `${a.idDipendente || 'sconosciuto'}|${accessDateKey(a)}`;
+
+    // I nuovi accessi salvati dall'app v0.8.0 hanno turnoIndex.
+    // Così più demo nello stesso giorno non si schiacciano più in una sola riga.
+    const turnoIndex = Number(a.turnoIndex || 0);
+    const key = isDenied
+      ? `${baseKey}|negato|${a.id || Math.random()}`
+      : `${baseKey}|turno|${turnoIndex > 0 ? turnoIndex : 'legacy'}`;
+
+    if(!groups.has(key)) {
+      groups.set(key, {
+        idDipendente: a.idDipendente || 'sconosciuto',
+        dataOperativa: accessDateKey(a),
+        turnoIndex: turnoIndex > 0 ? turnoIndex : null,
+        rows: []
+      });
+    }
     groups.get(key).rows.push(a);
   });
 
   const result = [];
+
   for(const g of groups.values()){
     const sorted_asc = [...g.rows].sort((a,b)=>accessSortDate(a)-accessSortDate(b));
-    // Timbrature negate/rifiutate → slot speciale
-    const eventRow = sorted_asc.find(a => a.tipoTimbratura === 'negato' || a.esito === 'negato');
+
+    const deniedRows = sorted_asc.filter(a => a.tipoTimbratura === 'negato' || a.esito === 'negato');
+    if(deniedRows.length){
+      deniedRows.forEach(ev => result.push({
+        idDipendente: g.idDipendente,
+        dataOperativa: g.dataOperativa,
+        turnoIndex: g.turnoIndex,
+        slots: [null,null,null,null],
+        event: ev,
+        rows: [ev]
+      }));
+      continue;
+    }
+
     const normalRows = sorted_asc.filter(a => a.tipoTimbratura !== 'negato' && a.esito !== 'negato');
-    const slots = assignSlots(normalRows);
-    result.push({ idDipendente: g.idDipendente, dataOperativa: g.dataOperativa, slots, event: eventRow || null, rows: sorted_asc });
+
+    if(g.turnoIndex){
+      result.push({
+        idDipendente: g.idDipendente,
+        dataOperativa: g.dataOperativa,
+        turnoIndex: g.turnoIndex,
+        slots: assignSlots(normalRows),
+        event: null,
+        rows: sorted_asc
+      });
+      continue;
+    }
+
+    // Compatibilità con accessi vecchi senza turnoIndex:
+    // crea più cicli quando arriva una nuova entrata dopo una uscita sera.
+    let currentRows = [];
+    const flush = () => {
+      if(!currentRows.length) return;
+      result.push({
+        idDipendente: g.idDipendente,
+        dataOperativa: g.dataOperativa,
+        turnoIndex: null,
+        slots: assignSlots(currentRows),
+        event: null,
+        rows: currentRows.slice()
+      });
+      currentRows = [];
+    };
+
+    for(const a of normalRows){
+      const t = a.tipoTimbratura;
+      if((t === 'entrata' || t === 'entrata_mattina') && currentRows.some(x => x.tipoTimbratura === 'uscita' || x.tipoTimbratura === 'uscita_sera')){
+        flush();
+      }
+      currentRows.push(a);
+      if(t === 'uscita' || t === 'uscita_sera'){
+        flush();
+      }
+    }
+    flush();
   }
 
   return result.sort((a,b)=>{
@@ -351,7 +421,8 @@ function renderAccessi(){
     const penEuro = allRows.reduce((sum,a)=>sum+penaltyEuro(a),0);
     const uid = first.uid || '---';
     const name = first.nomeCompleto || employeeName(first.idDipendente || g.idDipendente);
-    const dateLabel = g.dataOperativa && g.dataOperativa !== 'senza-data' ? g.dataOperativa : fmtDate(new Date());
+    const dateLabelBase = g.dataOperativa && g.dataOperativa !== 'senza-data' ? g.dataOperativa : fmtDate(new Date());
+    const dateLabel = g.turnoIndex ? `${dateLabelBase} · ciclo ${g.turnoIndex}` : dateLabelBase;
 
     let rowCls = 'open';
     if(g.event) rowCls = 'denied';
@@ -360,7 +431,7 @@ function renderAccessi(){
 
     const allIds = allRows.map(x=>x.id).filter(Boolean);
     const action = allIds.length > 1
-      ? `<button class="btn danger smallBtn" data-del-pair="${allIds.join(',')}">Elimina giornata</button>`
+      ? `<button class="btn danger smallBtn" data-del-pair="${allIds.join(',')}">Elimina ciclo</button>`
       : allIds.length === 1 ? `<button class="btn danger smallBtn" data-del-accesso="${allIds[0]}">Elimina</button>` : '';
 
     const slotBlocks = g.event
@@ -411,6 +482,7 @@ let applyingRemoteDemo = false;
 function fillDemo(){
   applyingRemoteDemo = true;
   $('demoEnabled').checked=!!state.demo.enabled;
+  if($('demoDate')) $('demoDate').value = state.demo.demoDate || todayKey();
   $('demoEntrata').value=state.demo.entrataScenario||'IN_ORARIO';
   $('demoUscitaPranzo').value=state.demo.uscitaPranzoScenario||'USCITA_PRANZO';
   $('demoEntrataPom').value=state.demo.entrataPomScenario||'ENTRATA_POMERIGGIO';
@@ -427,6 +499,7 @@ function toggleDemoOptions(){
 function updatePreview(){
   toggleDemoOptions();
   $('demoPreview').innerHTML=`<b>${$('demoEnabled').checked?'Demo attiva':'Demo disattivata'}</b><br>
+Data simulata: <b>${$('demoDate') ? $('demoDate').value : todayKey()}</b><br>
 1ª lettura badge → <b>Entrata mattina</b>: ${labelScenario($('demoEntrata').value)}<br>
 2ª lettura badge → <b>Uscita pranzo</b>: ${labelScenario($('demoUscitaPranzo').value)}<br>
 3ª lettura badge → <b>Entrata pomeriggio</b>: ${labelScenario($('demoEntrataPom').value)}<br>
@@ -451,6 +524,7 @@ function scheduleDemoAutoSave(resetOnEnable=false){
     const isOn = $('demoEnabled').checked;
     await setDoc(doc(db,'impostazioni_demo','global'),{
       enabled:isOn,
+      demoDate:$('demoDate') ? $('demoDate').value : todayKey(),
       entrataScenario:$('demoEntrata').value,
       uscitaPranzoScenario:$('demoUscitaPranzo').value,
       entrataPomScenario:$('demoEntrataPom').value,
@@ -463,6 +537,7 @@ function scheduleDemoAutoSave(resetOnEnable=false){
   }, 450);
 }
 $('demoEnabled').onchange=()=>scheduleDemoAutoSave(true);
+if($('demoDate')) $('demoDate').onchange=()=>scheduleDemoAutoSave(true);
 $('demoEntrata').onchange=()=>scheduleDemoAutoSave(false);
 $('demoUscitaPranzo').onchange=()=>scheduleDemoAutoSave(false);
 $('demoEntrataPom').onchange=()=>scheduleDemoAutoSave(false);

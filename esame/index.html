@@ -212,6 +212,8 @@
           </div>
           <div id="demoOptions" class="hidden">
             <div class="formgrid two">
+              <div class="field"><label>📅 Data simulata</label><input id="demoDate" type="date" /></div>
+              <div class="field"><label>Info</label><input value="La data demo separa le giornate nello storico" readonly /></div>
               <div class="field"><label>☀ Entrata mattina (1ª lettura)</label><select id="demoEntrata"><option value="IN_ORARIO">In orario — 07:58</option><option value="RITARDO_LIEVE">Ritardo lieve — 08:12</option><option value="RITARDO_GRAVE">Ritardo grave — 08:35</option></select></div>
               <div class="field"><label>🍽 Uscita pranzo (2ª lettura)</label><select id="demoUscitaPranzo"><option value="USCITA_PRANZO">In orario — 12:00</option><option value="USCITA_PRANZO_ANTICIPO">Anticipata — 11:45</option></select></div>
               <div class="field"><label>☕ Entrata pomeriggio (3ª lettura)</label><select id="demoEntrataPom"><option value="ENTRATA_POMERIGGIO">In orario — 13:00</option><option value="ENTRATA_POMERIGGIO_RITARDO">Ritardo rientro — 13:20</option></select></div>
@@ -220,7 +222,7 @@
             <div id="demoPreview" class="preview"></div>
             <div class="note-box" style="margin-top:14px">
               <b>Ciclo 4 timbrature:</b> 1ª lettura = entrata mattina · 2ª = uscita pranzo · 3ª = entrata pomeriggio · 4ª = uscita sera.<br>
-              Se manca la 3ª e la 4ª timbratura si nota subito chi è assente nel pomeriggio.
+              Puoi cambiare la data demo per simulare più giorni diversi. Se ripeti più cicli nello stesso giorno, verranno separati come ciclo 1, ciclo 2, ecc.
             </div>
             <div class="actions" style="flex-wrap:wrap;gap:8px;">
               <button id="resetPresenze" class="btn warning">☀ Reset → Entrata mattina</button>
