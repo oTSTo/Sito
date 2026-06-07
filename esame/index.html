@@ -175,7 +175,7 @@
       <section id="storico" class="view">
         <div class="card filters">
           <div class="field"><label>Dipendente</label><select id="fDip"><option value="">Tutti</option></select></div>
-          <div class="field"><label>Tipo</label><select id="fTipo"><option value="">Tutti</option><option value="entrata">Entrata</option><option value="uscita">Uscita</option><option value="negato">Negati</option></select></div>
+          <div class="field"><label>Tipo</label><select id="fTipo"><option value="">Tutti</option><option value="entrata">Entrata (tutte)</option><option value="uscita">Uscita (tutte)</option><option value="uscita_pranzo">Uscita pranzo</option><option value="entrata_pomeriggio">Entrata pomeriggio</option><option value="negato">Negati</option></select></div>
           <div class="field"><label>Esito</label><select id="fEsito"><option value="">Tutti</option><option value="consentito">Consentito</option><option value="negato">Negato</option></select></div>
           <div class="field"><label>Cerca</label><input id="fSearch" placeholder="Nome, UID, motivo..." /></div>
           <div class="filter-actions">
@@ -206,17 +206,21 @@
           </div>
           <div id="demoOptions" class="hidden">
             <div class="formgrid two">
-              <div class="field"><label>Entrata</label><select id="demoEntrata"><option value="IN_ORARIO">Entrata in orario — 07:58</option><option value="RITARDO_LIEVE">Ritardo lieve — 08:12</option><option value="RITARDO_GRAVE">Ritardo grave — 08:35</option></select></div>
-              <div class="field"><label>Uscita</label><select id="demoUscita"><option value="REGOLARE">Uscita regolare — 17:00</option><option value="STRAORDINARIO">Uscita in ritardo / straordinario — 17:35</option><option value="ANTICIPATA">Uscita anticipata — 16:20</option></select></div>
+              <div class="field"><label>☀ Entrata mattina (1ª lettura)</label><select id="demoEntrata"><option value="IN_ORARIO">In orario — 07:58</option><option value="RITARDO_LIEVE">Ritardo lieve — 08:12</option><option value="RITARDO_GRAVE">Ritardo grave — 08:35</option></select></div>
+              <div class="field"><label>🍽 Uscita pranzo (2ª lettura)</label><select id="demoUscitaPranzo"><option value="USCITA_PRANZO">In orario — 12:00</option><option value="USCITA_PRANZO_ANTICIPO">Anticipata — 11:45</option></select></div>
+              <div class="field"><label>☕ Entrata pomeriggio (3ª lettura)</label><select id="demoEntrataPom"><option value="ENTRATA_POMERIGGIO">In orario — 13:00</option><option value="ENTRATA_POMERIGGIO_RITARDO">Ritardo rientro — 13:20</option></select></div>
+              <div class="field"><label>🌙 Uscita sera (4ª lettura)</label><select id="demoUscita"><option value="REGOLARE">Regolare — 17:00</option><option value="STRAORDINARIO">Straordinario — 17:35</option><option value="ANTICIPATA">Anticipata — 16:20</option></select></div>
             </div>
             <div id="demoPreview" class="preview"></div>
             <div class="note-box" style="margin-top:14px">
-              <b>Come usarla all'esame:</b> attiva la modalità demo e scegli la combo. La dashboard salva automaticamente ogni modifica.<br>
-              1ª lettura = entrata, 2ª lettura = uscita.
+              <b>Ciclo 4 timbrature:</b> 1ª lettura = entrata mattina · 2ª = uscita pranzo · 3ª = entrata pomeriggio · 4ª = uscita sera.<br>
+              Se manca la 3ª e la 4ª timbratura si nota subito chi è assente nel pomeriggio.
             </div>
-            <div class="actions">
-              <button id="resetPresenze" class="btn warning">Reset giro demo: prossima lettura = entrata</button>
-              <button id="forceUscita" class="btn ghost">Forza prossima lettura = uscita</button>
+            <div class="actions" style="flex-wrap:wrap;gap:8px;">
+              <button id="resetPresenze" class="btn warning">☀ Reset → Entrata mattina</button>
+              <button id="forceUscitaPranzo" class="btn ghost">🍽 Forza → Uscita pranzo</button>
+              <button id="forceEntrataPom" class="btn ghost">☕ Forza → Entrata pomeriggio</button>
+              <button id="forceUscita" class="btn ghost">🌙 Forza → Uscita sera</button>
             </div>
           </div>
           <div id="demoOffMessage" class="preview">Demo disattivata: le opzioni sono nascoste e l'app usa l'orario reale.</div>

@@ -67,6 +67,20 @@ function workingDurationBetween(start, end=new Date(), d){
 function todayAccessesFor(id){ const t=todayKey(); return state.accessi.filter(a=>a.idDipendente===id && (a.dataOperativa===t || (toDate(a.dataOra)?.toISOString().slice(0,10)===t))); }
 function todayPresenceFor(id){ const t=todayKey(); return [...state.presenze.values()].find(p=>p.idDipendente===id && p.dataOperativa===t) || null; }
 
+// Assegna le timbrature ordinate ai 4 slot giornalieri: [entrata_mat, uscita_pranzo, entrata_pom, uscita_sera]
+function assignSlots(rows_asc){
+  const slots = [null, null, null, null];
+  for(const a of rows_asc){
+    const t = a.tipoTimbratura;
+    if((t === 'entrata' || t === 'entrata_mattina') && slots[0] === null){ slots[0] = a; }
+    else if(t === 'uscita_pranzo' && slots[1] === null){ slots[1] = a; }
+    else if(t === 'entrata_pomeriggio' && slots[2] === null){ slots[2] = a; }
+    else if((t === 'uscita' || t === 'uscita_sera') && slots[3] === null){ slots[3] = a; }
+    else if(t === 'entrata' && slots[0] !== null && slots[2] === null){ slots[2] = a; } // 2ª entrata = pomeriggio (backward compat)
+  }
+  return slots;
+}
+
 async function isAdmin(user){ return (await getDoc(doc(db,'admins',user.uid))).exists(); }
 function clearUnsubs(){ state.unsubs.forEach(u=>{try{u()}catch{}}); state.unsubs=[]; }
 
@@ -123,8 +137,8 @@ function renderHome(){
   $('hBadgeAttivi').textContent=[...state.badge.values()].filter(b=>b.stato==='attivo').length;
   $('hBadgeBloccati').textContent=[...state.badge.values()].filter(b=>['bloccato','smarrito'].includes(b.stato)).length;
   $('hAccessiOggi').textContent=today.length;
-  $('hEntrate').textContent=today.filter(a=>a.tipoTimbratura==='entrata').length;
-  $('hUscite').textContent=today.filter(a=>a.tipoTimbratura==='uscita').length;
+  $('hEntrate').textContent=today.filter(a=>['entrata','entrata_mattina','entrata_pomeriggio'].includes(a.tipoTimbratura)).length;
+  $('hUscite').textContent=today.filter(a=>['uscita','uscita_sera','uscita_pranzo'].includes(a.tipoTimbratura)).length;
   $('hRitardi').textContent=today.filter(a=>Number(a.ritardoMinuti||0)>0).length;
   $('hPenalita').textContent=minutesToHM(today.reduce((sum,a)=>sum+penaltyMinutes(a),0));
   $('homeRecent').innerHTML=state.accessi.slice().sort((a,b)=>accessSortDate(b)-accessSortDate(a)).slice(0,8).map(a=>`<div class="listitem"><strong>${a.nomeCompleto||a.uid} ${pill(a.tipoTimbratura)} ${pill(a.esito)}</strong><span>${fmtDate(a.dataOra)} · ${a.motivo||'---'} · ritardo ${a.ritardoMinuti||0} min · penalità ${minutesToHM(penaltyMinutes(a))}</span></div>`).join('') || '<div class="muted">Nessuna timbratura.</div>';
@@ -144,25 +158,30 @@ function renderPresenzeCards(){
     const pres = todayPresenceFor(d.id);
     const b = findBadgeByDipendente(d.id);
     const todayRows = todayAccessesFor(d.id);
-    const todayEntrata = pres?.ultimaEntrataOra ? {oraRegistrata:pres.ultimaEntrataOra, dataOra:pres.ultimaEntrataAt} : todayRows.find(a=>a.tipoTimbratura==='entrata');
-    const todayUscita = pres?.ultimaUscitaOra ? {oraRegistrata:pres.ultimaUscitaOra, dataOra:pres.ultimaUscitaAt} : todayRows.find(a=>a.tipoTimbratura==='uscita');
-    const latestToday = pres?.ultimoTipo ? {tipoTimbratura:pres.ultimoTipo, oraRegistrata:pres.ultimoOrario} : todayRows[0];
+    const sorted_asc = [...todayRows].sort((a,b)=>accessSortDate(a)-accessSortDate(b));
+    const slots = assignSlots(sorted_asc);
+
+    const latestTipo = pres?.ultimoTipo || (sorted_asc.length > 0 ? sorted_asc[sorted_asc.length-1].tipoTimbratura : null);
 
     let status = 'Non entrato';
     let cls = 'notstarted';
     let timeInfo = 'Nessuna entrata oggi';
 
-    if(latestToday?.tipoTimbratura === 'entrata'){
+    if(latestTipo === 'entrata' || latestTipo === 'entrata_mattina' || latestTipo === 'entrata_pomeriggio'){
       status = 'Dentro'; cls = 'inside';
-      timeInfo = 'Lavora da ' + workingDurationBetween(todayEntrata?.dataOra, now, d);
-    } else if(latestToday?.tipoTimbratura === 'uscita'){
+      const lastEntrata = slots[2] || slots[0];
+      timeInfo = 'Lavora da ' + workingDurationBetween(lastEntrata?.dataOra, now, d);
+    } else if(latestTipo === 'uscita_pranzo'){
+      status = 'In pausa'; cls = 'pausa';
+      timeInfo = 'Pausa pranzo dalle ' + (slots[1]?.oraRegistrata || pres?.ultimoOrario || '---');
+    } else if(latestTipo === 'uscita' || latestTipo === 'uscita_sera'){
       status = 'Uscito'; cls = 'outside';
-      timeInfo = 'Uscito alle ' + (todayUscita?.oraRegistrata || latestToday.oraRegistrata || '---');
+      timeInfo = 'Uscito alle ' + (slots[3]?.oraRegistrata || pres?.ultimoOrario || '---');
     }
 
-    const ritardo = pres?.ritardoMinuti ?? todayEntrata?.ritardoMinuti ?? 0;
-    const penalitaMin = pres?.penalitaMinuti ?? penaltyMinutes(todayEntrata) + penaltyMinutes(todayUscita);
-    const oreLavorate = pres?.oreLavorateMinuti ?? todayUscita?.oreLavorateMinuti ?? 0;
+    const ritardo = pres?.ritardoMinuti ?? slots[0]?.ritardoMinuti ?? 0;
+    const penalitaMin = pres?.penalitaMinuti ?? slots.filter(Boolean).reduce((s,a)=>s+penaltyMinutes(a),0);
+    const oreLavorate = pres?.oreLavorateMinuti ?? slots[3]?.oreLavorateMinuti ?? 0;
     const turno = scheduleText(d);
     const w = workSchedule(d);
     return `<div class="employee-card ${cls}">
@@ -174,13 +193,15 @@ function renderPresenzeCards(){
         <div><span>Turno</span><strong>${turno}</strong></div>
         <div><span>Pausa</span><strong>${w.pausaInizio} - ${w.pausaFine}</strong></div>
         <div><span>Badge</span><strong>${b?.uid || '---'}</strong></div>
-        <div><span>Entrata</span><strong>${todayEntrata?.oraRegistrata || '---'}</strong></div>
-        <div><span>Uscita</span><strong>${todayUscita?.oraRegistrata || '---'}</strong></div>
         <div><span>Ritardo</span><strong>${ritardo} min</strong></div>
+        <div><span>☀ Entrata mat.</span><strong>${slots[0]?.oraRegistrata || '---'}</strong></div>
+        <div><span>🍽 Uscita pranzo</span><strong>${slots[1]?.oraRegistrata || '---'}</strong></div>
+        <div><span>☕ Entrata pom.</span><strong>${slots[2]?.oraRegistrata || '---'}</strong></div>
+        <div><span>🌙 Uscita sera</span><strong>${slots[3]?.oraRegistrata || '---'}</strong></div>
         <div><span>Penalità</span><strong>${minutesToHM(penalitaMin)}</strong></div>
         <div><span>Ore lavorate</span><strong>${minutesToHM(oreLavorate)}</strong></div>
       </div>
-      <div class="employee-footer">Ultimo stato: <b>${status}</b></div>
+      <div class="employee-footer">Stato: <b>${status}</b></div>
     </div>`;
   }).join('');
 }
@@ -231,80 +252,58 @@ function accessDateKey(a){
   return a?.dataOperativa || (toDate(a?.dataOra)?.toISOString().slice(0,10)) || 'senza-data';
 }
 function accessSortDate(a){
-  // Per accoppiare entrata/uscita usiamo il momento reale in cui è stata salvata la timbratura.
-  // In demo dataOra può essere sempre 08:35/17:00, quindi se usassimo dataOra le coppie successive verrebbero ordinate male.
   return toDate(a?.registratoIl) || toDate(a?.dataOra) || new Date(0);
 }
-function accessEvents(pair){
-  return [pair.entry, pair.exit, pair.event].filter(Boolean);
-}
-function pairLatestDate(pair){
-  return accessEvents(pair).map(accessSortDate).sort((a,b)=>b-a)[0] || new Date(0);
-}
-function pairMatchesType(pair, tipo){
-  if(!tipo) return true;
-  const ev = accessEvents(pair);
-  if(tipo === 'negato') return ev.some(a => a.esito === 'negato' || a.tipoTimbratura === 'negato');
-  return ev.some(a => a.tipoTimbratura === tipo);
-}
-function buildAccessPairs(rows){
+
+// Raggruppa gli accessi in giornate con 4 slot: [entrata_mat, uscita_pranzo, entrata_pom, uscita_sera]
+function buildDayGroups(rows){
   const groups = new Map();
   rows.forEach(a=>{
     const key = `${a.idDipendente || 'sconosciuto'}|${accessDateKey(a)}`;
-    if(!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(a);
+    if(!groups.has(key)) groups.set(key, { idDipendente: a.idDipendente || 'sconosciuto', dataOperativa: accessDateKey(a), rows: [] });
+    groups.get(key).rows.push(a);
   });
 
-  const pairs = [];
-  for(const [key, group] of groups.entries()){
-    const [idDipendente, dataOperativa] = key.split('|');
-    // Non eliminiamo le timbrature uguali: in modalità demo due cicli possono avere la stessa ora simulata
-    // ma sono eventi diversi. L'anti-doppia lettura è gestito dall'app Android.
-    const sorted = group.slice().sort((a,b)=>accessSortDate(a)-accessSortDate(b));
-    let openEntry = null;
-
-    sorted.forEach(a=>{
-      const type = a.tipoTimbratura;
-      const isNormal = a.esito === 'consentito' && (type === 'entrata' || type === 'uscita');
-
-      if(!isNormal){
-        pairs.push({ idDipendente, dataOperativa, event:a });
-        return;
-      }
-
-      if(type === 'entrata'){
-        if(openEntry){
-          pairs.push({ idDipendente, dataOperativa, entry:openEntry, exit:null });
-        }
-        openEntry = a;
-      }else if(type === 'uscita'){
-        if(openEntry){
-          pairs.push({ idDipendente, dataOperativa, entry:openEntry, exit:a });
-          openEntry = null;
-        }else{
-          pairs.push({ idDipendente, dataOperativa, entry:null, exit:a });
-        }
-      }
-    });
-
-    if(openEntry){
-      pairs.push({ idDipendente, dataOperativa, entry:openEntry, exit:null });
-    }
+  const result = [];
+  for(const g of groups.values()){
+    const sorted_asc = [...g.rows].sort((a,b)=>accessSortDate(a)-accessSortDate(b));
+    // Timbrature negate/rifiutate → slot speciale
+    const eventRow = sorted_asc.find(a => a.tipoTimbratura === 'negato' || a.esito === 'negato');
+    const normalRows = sorted_asc.filter(a => a.tipoTimbratura !== 'negato' && a.esito !== 'negato');
+    const slots = assignSlots(normalRows);
+    result.push({ idDipendente: g.idDipendente, dataOperativa: g.dataOperativa, slots, event: eventRow || null, rows: sorted_asc });
   }
 
-  return pairs.sort((a,b)=>pairLatestDate(b)-pairLatestDate(a));
+  return result.sort((a,b)=>{
+    const lastA = a.rows.map(accessSortDate).sort((x,y)=>y-x)[0] || new Date(0);
+    const lastB = b.rows.map(accessSortDate).sort((x,y)=>y-x)[0] || new Date(0);
+    return lastB - lastA;
+  });
 }
 
-function accessSimpleBlock(a, type){
-  const label = type === 'entrata' ? 'Entrata' : type === 'uscita' ? 'Uscita' : 'Evento';
+function groupMatchesType(g, tipo){
+  if(!tipo) return true;
+  const all = [...g.slots.filter(Boolean), g.event].filter(Boolean);
+  if(tipo === 'negato') return all.some(a => a.esito === 'negato' || a.tipoTimbratura === 'negato');
+  if(tipo === 'entrata') return all.some(a => ['entrata','entrata_mattina','entrata_pomeriggio'].includes(a.tipoTimbratura));
+  if(tipo === 'uscita') return all.some(a => ['uscita','uscita_sera','uscita_pranzo'].includes(a.tipoTimbratura));
+  return all.some(a => a.tipoTimbratura === tipo);
+}
+
+const SLOT_LABELS = ['Entrata mattina','Uscita pranzo','Entrata pom.','Uscita sera'];
+const SLOT_CLS    = ['entry','exit','entry','exit'];
+
+function accessSlotBlock(a, slotIdx){
+  const label = SLOT_LABELS[slotIdx];
   if(!a){
     return `<div class="histTime empty"><span>${label}</span><strong>---</strong><small>Non registrata</small></div>`;
   }
 
   let extraLines = [];
   let badgeTags = '';
+  const isEntrata = slotIdx === 0 || slotIdx === 2;
 
-  if(type === 'entrata'){
+  if(isEntrata){
     const ritardo = Number(a.ritardoMinuti || 0);
     const penMin = penaltyMinutes(a);
     const penEuro = penaltyEuro(a);
@@ -314,25 +313,23 @@ function accessSimpleBlock(a, type){
     } else {
       extraLines.push('In orario');
     }
-  } else if(type === 'uscita'){
-    const anticipo = Number(a.uscitaAnticipataMinuti || 0);
-    const straord = Number(a.straordinarioMinuti || 0);
-    const penMin = penaltyMinutes(a);
-    const penEuro = penaltyEuro(a);
-    if(anticipo > 0){
-      extraLines.push(`Uscita anticipata: ${anticipo} min`);
-      badgeTags += `<span class="histBadge penalty">⚠ Penalità ${minutesToHM(penMin)}${penEuro>0?' · €'+penEuro.toFixed(2):''}</span>`;
-    } else if(straord > 0){
-      extraLines.push(`Uscita regolare`);
-      badgeTags += `<span class="histBadge overtime">★ Straordinari ${minutesToHM(straord)}</span>`;
-    } else {
-      extraLines.push('Uscita regolare');
-    }
   } else {
-    extraLines.push(a.motivo || a.esito || '---');
+    const anticipo = Number(a.uscitaAnticipataMinuti || 0);
+    const straord  = Number(a.straordinarioMinuti || 0);
+    const penMin   = penaltyMinutes(a);
+    const penEuro  = penaltyEuro(a);
+    if(anticipo > 0){
+      extraLines.push(`Anticipata: ${anticipo} min`);
+      badgeTags += `<span class="histBadge penalty">⚠ Penalità ${minutesToHM(penMin)}${penEuro>0?' · €'+penEuro.toFixed(2):''}</span>`;
+    } else if(straord > 0 && slotIdx === 3){
+      extraLines.push('Regolare');
+      badgeTags += `<span class="histBadge overtime">★ Straord. ${minutesToHM(straord)}</span>`;
+    } else {
+      extraLines.push('Regolare');
+    }
   }
 
-  const cls = type === 'entrata' ? 'entry' : type === 'uscita' ? 'exit' : 'denied';
+  const cls = SLOT_CLS[slotIdx];
   return `<div class="histTime ${cls}">
     <div class="histTimeTop"><span>${label}</span><button class="plainX" data-del-accesso="${a.id}" title="Elimina timbratura">×</button></div>
     <strong>${a.oraRegistrata || fmtDate(a.dataOra)}</strong>
@@ -344,37 +341,45 @@ function accessSimpleBlock(a, type){
 function renderAccessi(){
   const dip=$('fDip').value, tipo=$('fTipo').value, esito=$('fEsito').value, q=$('fSearch').value.toLowerCase().trim();
   const base=state.accessi.filter(a=>(!dip||a.idDipendente===dip)&&(!esito||a.esito===esito)&&(!q||JSON.stringify(a).toLowerCase().includes(q)));
-  const pairs=buildAccessPairs(base).filter(p=>pairMatchesType(p,tipo));
+  const groups=buildDayGroups(base).filter(g=>groupMatchesType(g,tipo));
 
-  $('accessiTable').innerHTML=pairs.map(p=>{
-    const ev = accessEvents(p);
-    const first = p.entry || p.exit || p.event || {};
-    const summary = p.exit || p.entry || p.event || {};
-    const penMin = ev.reduce((sum,a)=>sum+penaltyMinutes(a),0);
-    const penEuro = ev.reduce((sum,a)=>sum+penaltyEuro(a),0);
+  $('accessiTable').innerHTML=groups.map(g=>{
+    const allRows = [...g.slots.filter(Boolean), g.event].filter(Boolean);
+    const first = g.slots[0] || g.slots[1] || g.slots[2] || g.slots[3] || g.event || {};
+    const uscitaSera = g.slots[3];
+    const penMin  = allRows.reduce((sum,a)=>sum+penaltyMinutes(a),0);
+    const penEuro = allRows.reduce((sum,a)=>sum+penaltyEuro(a),0);
     const uid = first.uid || '---';
-    const name = first.nomeCompleto || employeeName(first.idDipendente || p.idDipendente);
-    const dateLabel = p.dataOperativa && p.dataOperativa !== 'senza-data' ? p.dataOperativa : fmtDate(pairLatestDate(p));
-    const rowCls = p.event ? 'denied' : (p.entry && p.exit ? 'complete' : 'open');
-    const entrataBlock = p.event ? accessSimpleBlock(p.event, 'evento') : accessSimpleBlock(p.entry, 'entrata');
-    const uscitaBlock = p.event ? accessSimpleBlock(null, 'uscita') : accessSimpleBlock(p.exit, 'uscita');
-    const action = ev.length > 1
-      ? `<button class="btn danger smallBtn" data-del-pair="${ev.map(x=>x.id).join(',')}">Elimina coppia</button>`
-      : `<button class="btn danger smallBtn" data-del-accesso="${ev[0]?.id || ''}">Elimina</button>`;
+    const name = first.nomeCompleto || employeeName(first.idDipendente || g.idDipendente);
+    const dateLabel = g.dataOperativa && g.dataOperativa !== 'senza-data' ? g.dataOperativa : fmtDate(new Date());
+
+    let rowCls = 'open';
+    if(g.event) rowCls = 'denied';
+    else if(g.slots[0] && g.slots[1] && g.slots[2] && g.slots[3]) rowCls = 'complete';
+    else if(g.slots[0] && g.slots[3] && !g.slots[1] && !g.slots[2]) rowCls = 'complete'; // backward compat 2 timbrature
+
+    const allIds = allRows.map(x=>x.id).filter(Boolean);
+    const action = allIds.length > 1
+      ? `<button class="btn danger smallBtn" data-del-pair="${allIds.join(',')}">Elimina giornata</button>`
+      : allIds.length === 1 ? `<button class="btn danger smallBtn" data-del-accesso="${allIds[0]}">Elimina</button>` : '';
+
+    const slotBlocks = g.event
+      ? `<div class="histTime denied"><div class="histTimeTop"><span>Accesso negato</span><button class="plainX" data-del-accesso="${g.event.id}" title="Elimina">×</button></div><strong>${g.event.oraRegistrata||fmtDate(g.event.dataOra)}</strong><small>${g.event.motivo||g.event.esito||'---'}</small></div>`
+      : [0,1,2,3].map(i=>accessSlotBlock(g.slots[i],i)).join('');
 
     return `<article class="historyItem ${rowCls}">
       <div class="histMain">
         <div class="histPerson">
           <span class="histDate">${dateLabel}</span>
           <strong>${name}</strong>
-          <small>${first.idDipendente || p.idDipendente || '---'} · ${uid}</small>
+          <small>${first.idDipendente || g.idDipendente || '---'} · ${uid}</small>
         </div>
-        <div class="histTimes">${entrataBlock}${uscitaBlock}</div>
+        <div class="histTimes4">${slotBlocks}</div>
       </div>
       <div class="histSummary">
-        <div><span>Ore</span><b>${minutesToHM(summary.oreLavorateMinuti)}</b></div>
-        <div><span>Ritardo</span><b>${summary.ritardoMinuti || p.entry?.ritardoMinuti || 0} min</b></div>
-        <div><span>Anticipo</span><b>${summary.uscitaAnticipataMinuti || 0} min</b></div>
+        <div><span>Ore</span><b>${minutesToHM(uscitaSera?.oreLavorateMinuti||0)}</b></div>
+        <div><span>Ritardo</span><b>${g.slots[0]?.ritardoMinuti||0} min</b></div>
+        <div><span>Anticipo</span><b>${uscitaSera?.uscitaAnticipataMinuti||0} min</b></div>
         <div><span>Penalità</span><b>${minutesToHM(penMin)}</b><small>€${penEuro.toFixed(2)}</small></div>
       </div>
       <div class="histActions">${action}</div>
@@ -385,9 +390,9 @@ function renderAccessi(){
   document.querySelectorAll('[data-del-pair]').forEach(b=>b.onclick=async()=>{
     const ids = String(b.dataset.delPair||'').split(',').filter(Boolean);
     if(!ids.length) return;
-    if(!confirm('Eliminare questa coppia entrata/uscita?')) return;
+    if(!confirm('Eliminare tutte le timbrature di questa giornata?')) return;
     for(const id of ids){ await deleteDoc(doc(db,'accessi',id)); }
-    toast('Coppia eliminata');
+    toast('Timbrature eliminate');
   });
 }
 
@@ -399,13 +404,15 @@ function renderTerminali(){
 }
 async function setTerm(id,stato){ await updateDoc(doc(db,'terminali',id),{stato,aggiornatoIl:serverTimestamp(),aggiornatoDa:state.user.uid}); toast('Terminale '+stato); }
 
-function labelScenario(s){ return {IN_ORARIO:'entrata in orario 07:58',RITARDO_LIEVE:'ritardo lieve 08:12',RITARDO_GRAVE:'ritardo grave 08:35',REGOLARE:'uscita regolare 17:00',STRAORDINARIO:'uscita in ritardo / straordinario 17:35',ANTICIPATA:'uscita anticipata 16:20'}[s]||s; }
+function labelScenario(s){ return {IN_ORARIO:'entrata mat. in orario 07:58',RITARDO_LIEVE:'ritardo lieve 08:12',RITARDO_GRAVE:'ritardo grave 08:35',USCITA_PRANZO:'uscita pranzo in orario 12:00',USCITA_PRANZO_ANTICIPO:'uscita pranzo anticipata 11:45',ENTRATA_POMERIGGIO:'rientro pom. in orario 13:00',ENTRATA_POMERIGGIO_RITARDO:'rientro pom. in ritardo 13:20',REGOLARE:'uscita sera regolare 17:00',STRAORDINARIO:'uscita sera tardi / straordinario 17:35',ANTICIPATA:'uscita sera anticipata 16:20'}[s]||s; }
 let demoSaveTimer = null;
 let applyingRemoteDemo = false;
 function fillDemo(){
   applyingRemoteDemo = true;
   $('demoEnabled').checked=!!state.demo.enabled;
   $('demoEntrata').value=state.demo.entrataScenario||'IN_ORARIO';
+  $('demoUscitaPranzo').value=state.demo.uscitaPranzoScenario||'USCITA_PRANZO';
+  $('demoEntrataPom').value=state.demo.entrataPomScenario||'ENTRATA_POMERIGGIO';
   $('demoUscita').value=state.demo.uscitaScenario||'REGOLARE';
   updatePreview();
   applyingRemoteDemo = false;
@@ -418,7 +425,11 @@ function toggleDemoOptions(){
 }
 function updatePreview(){
   toggleDemoOptions();
-  $('demoPreview').innerHTML=`<b>${$('demoEnabled').checked?'Demo attiva':'Demo disattivata'}</b><br>Prima lettura badge → ENTRATA: ${labelScenario($('demoEntrata').value)}<br>Seconda lettura badge → USCITA: ${labelScenario($('demoUscita').value)}`;
+  $('demoPreview').innerHTML=`<b>${$('demoEnabled').checked?'Demo attiva':'Demo disattivata'}</b><br>
+1ª lettura badge → <b>Entrata mattina</b>: ${labelScenario($('demoEntrata').value)}<br>
+2ª lettura badge → <b>Uscita pranzo</b>: ${labelScenario($('demoUscitaPranzo').value)}<br>
+3ª lettura badge → <b>Entrata pomeriggio</b>: ${labelScenario($('demoEntrataPom').value)}<br>
+4ª lettura badge → <b>Uscita sera</b>: ${labelScenario($('demoUscita').value)}`;
 }
 async function forceNextTimbratura(tipo){
   for(const p of state.presenze.values()){
@@ -440,6 +451,8 @@ function scheduleDemoAutoSave(resetOnEnable=false){
     await setDoc(doc(db,'impostazioni_demo','global'),{
       enabled:isOn,
       entrataScenario:$('demoEntrata').value,
+      uscitaPranzoScenario:$('demoUscitaPranzo').value,
+      entrataPomScenario:$('demoEntrataPom').value,
       uscitaScenario:$('demoUscita').value,
       aggiornatoIl:serverTimestamp(),
       aggiornatoDa:state.user.uid
@@ -450,9 +463,13 @@ function scheduleDemoAutoSave(resetOnEnable=false){
 }
 $('demoEnabled').onchange=()=>scheduleDemoAutoSave(true);
 $('demoEntrata').onchange=()=>scheduleDemoAutoSave(false);
+$('demoUscitaPranzo').onchange=()=>scheduleDemoAutoSave(false);
+$('demoEntrataPom').onchange=()=>scheduleDemoAutoSave(false);
 $('demoUscita').onchange=()=>scheduleDemoAutoSave(false);
-$('resetPresenze').onclick=async()=>{ if(!confirm('Resetto tutte le presenze giornaliere: la prossima lettura sarà ENTRATA?')) return; await forceNextTimbratura('entrata'); toast('Reset demo fatto: prossima lettura = ENTRATA'); };
-$('forceUscita').onclick=async()=>{ if(!confirm('Forzo tutte le presenze: la prossima lettura sarà USCITA?')) return; await forceNextTimbratura('uscita'); toast('Prossima lettura impostata su USCITA'); };
+$('resetPresenze').onclick=async()=>{ if(!confirm('Resetto tutte le presenze: la prossima lettura sarà ENTRATA MATTINA?')) return; await forceNextTimbratura('entrata'); toast('Reset: prossima = ENTRATA MATTINA'); };
+$('forceUscitaPranzo').onclick=async()=>{ if(!confirm('Forzo prossima lettura = USCITA PRANZO?')) return; await forceNextTimbratura('uscita_pranzo'); toast('Prossima: USCITA PRANZO'); };
+$('forceEntrataPom').onclick=async()=>{ if(!confirm('Forzo prossima lettura = ENTRATA POMERIGGIO?')) return; await forceNextTimbratura('entrata_pomeriggio'); toast('Prossima: ENTRATA POMERIGGIO'); };
+$('forceUscita').onclick=async()=>{ if(!confirm('Forzo prossima lettura = USCITA SERA?')) return; await forceNextTimbratura('uscita'); toast('Prossima: USCITA SERA'); };
 setInterval(()=>renderPresenzeCards(), 30000);
 fillDemo();
 
