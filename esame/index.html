@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Azienda Badge NFC — Dashboard v10</title>
+  <title>Azienda Badge NFC — Dashboard v11</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -183,6 +183,12 @@
             <button id="exportCSV" class="btn primary">⬇ Esporta CSV mensile</button>
             <button id="clearAllAccessi" class="btn danger">Pulisci tutto</button>
           </div>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title">Riepilogo paghe ultimi 30 giorni</h3>
+          <p class="muted small">Calcolo dimostrativo: ore lavorate finali, paga oraria, straordinari +25%, penalità e totale da pagare.</p>
+          <div class="tablewrap"><table><thead><tr><th>Dipendente</th><th>Reparto</th><th>Giorni</th><th>Ore lavorate</th><th>Straordinari</th><th>Paga/h</th><th>Totale</th></tr></thead><tbody id="monthlyTable"></tbody></table></div>
         </div>
         <div class="card simpleHistoryCard"><div id="accessiTable" class="historyList"></div></div>
       </section>

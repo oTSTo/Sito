@@ -129,7 +129,7 @@ function startRealtime(){
   state.unsubs.push(onSnapshot(collection(db,'presenze_giornaliere'), snap=>{ state.presenze.clear(); snap.forEach(d=>state.presenze.set(d.id,{id:d.id,...d.data()})); renderAll(); }));
   state.unsubs.push(onSnapshot(doc(db,'impostazioni_demo','global'), snap=>{ if(snap.exists()) state.demo={...state.demo,...snap.data()}; fillDemo(); renderHome(); }));
 }
-function renderAll(){ renderHome(); renderPresenzeCards(); renderDip(); renderBadge(); renderFilters(); renderAccessi(); }
+function renderAll(){ renderHome(); renderPresenzeCards(); renderDip(); renderBadge(); renderFilters(); renderMonthlySummary(); renderAccessi(); }
 
 function renderHome(){
   const t=todayKey(); const today=state.accessi.filter(a=>a.dataOperativa===t || (a.dataOra?.toDate && a.dataOra.toDate().toISOString().slice(0,10)===t));
@@ -378,8 +378,9 @@ function renderAccessi(){
       </div>
       <div class="histSummary">
         <div><span>Ore</span><b>${minutesToHM(uscitaSera?.oreLavorateMinuti||0)}</b></div>
-        <div><span>Ritardo</span><b>${g.slots[0]?.ritardoMinuti||0} min</b></div>
+        <div><span>Ritardo</span><b>${(g.slots[0]?.ritardoMinuti||0) + (g.slots[2]?.ritardoMinuti||0)} min</b></div>
         <div><span>Anticipo</span><b>${uscitaSera?.uscitaAnticipataMinuti||0} min</b></div>
+        <div><span>Straord.</span><b>${minutesToHM(uscitaSera?.straordinarioMinuti||0)}</b></div>
         <div><span>Penalità</span><b>${minutesToHM(penMin)}</b><small>€${penEuro.toFixed(2)}</small></div>
       </div>
       <div class="histActions">${action}</div>
@@ -473,14 +474,14 @@ $('forceUscita').onclick=async()=>{ if(!confirm('Forzo prossima lettura = USCITA
 setInterval(()=>renderPresenzeCards(), 30000);
 fillDemo();
 
-// ─── ESPORTA CSV MENSILE ─────────────────────────────────────────────────────
-function exportMensileCSV(){
+// ─── RIEPILOGO MENSILE / CSV ────────────────────────────────────────────────
+function getMonthlySummary(){
   const now = new Date();
   const cutoff = new Date(now);
   cutoff.setDate(cutoff.getDate() - 30);
 
   const accMese = state.accessi.filter(a => {
-    const d = toDate(a.dataOra);
+    const d = toDate(a.dataOra) || toDate(a.registratoIl);
     return d && d >= cutoff;
   });
 
@@ -502,19 +503,47 @@ function exportMensileCSV(){
     const rec = dipData.get(a.idDipendente);
     if(!rec) continue;
     const dateKey = accessDateKey(a);
-    if(a.tipoTimbratura === 'uscita' && a.esito === 'consentito'){
+    const isFinalExit = ['uscita','uscita_sera'].includes(a.tipoTimbratura) && a.esito === 'consentito';
+    if(isFinalExit){
       rec.minutiLavorati += Number(a.oreLavorateMinuti || 0);
       rec.minutiStraordinari += Number(a.straordinarioMinuti || 0);
       if(dateKey !== 'senza-data') rec.giorniLavorati.add(dateKey);
     }
     rec.penalitaEuro += penaltyEuro(a);
   }
+  return [...dipData.values()];
+}
 
+function renderMonthlySummary(){
+  const body = $('monthlyTable');
+  if(!body) return;
+  const rows = getMonthlySummary();
+  body.innerHTML = rows.map(rec=>{
+    const oreBase = rec.minutiLavorati / 60;
+    const oreStraord = rec.minutiStraordinari / 60;
+    const pagaBase = oreBase * rec.pagaOraria;
+    const pagaStraord = oreStraord * rec.pagaOraria * 1.25;
+    const totale = Math.max(0, pagaBase + pagaStraord - rec.penalitaEuro);
+    return `<tr>
+      <td><b>${rec.nome}</b><br><span class="muted">${rec.id}</span></td>
+      <td>${rec.reparto}</td>
+      <td>${rec.giorniLavorati.size}</td>
+      <td>${oreBase.toFixed(2)} h</td>
+      <td>${oreStraord.toFixed(2)} h</td>
+      <td>€ ${rec.pagaOraria.toFixed(2)}</td>
+      <td><b>€ ${totale.toFixed(2)}</b><br><span class="muted">base €${pagaBase.toFixed(2)} · straord. €${pagaStraord.toFixed(2)} · pen. €${rec.penalitaEuro.toFixed(2)}</span></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7">Nessun dipendente.</td></tr>';
+}
+
+// ─── ESPORTA CSV MENSILE ─────────────────────────────────────────────────────
+function exportMensileCSV(){
+  const now = new Date();
   const rows = [
     ['ID','Nome','Reparto','Giorni lavorati','Ore lavorate','Ore straordinari','Paga oraria (€)','Retribuzione base (€)','Straordinari +25% (€)','Penalità (€)','TOTALE DA PAGARE (€)']
   ];
 
-  for(const rec of dipData.values()){
+  for(const rec of getMonthlySummary()){
     const oreBase = rec.minutiLavorati / 60;
     const oreStraord = rec.minutiStraordinari / 60;
     const pagaBase = oreBase * rec.pagaOraria;

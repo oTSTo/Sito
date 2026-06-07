@@ -1,4 +1,4 @@
-# Azienda Badge NFC — Dashboard v10
+# Azienda Badge NFC — Dashboard v11
 
 ## Novità v10
 - **Login screen separata**: quando non sei autenticato vedi solo il form di login, la sidebar e l'app sono completamente nascosti
@@ -21,3 +21,10 @@
 | `app.js` | Logica Firebase + rendering |
 | `firebase-config.js` | Credenziali Firebase (da configurare) |
 | `firestore.rules` | Regole Firestore |
+
+
+## Novità v11
+- Storico accessi a 4 timbrature: entrata mattina, uscita pranzo, entrata pomeriggio, uscita sera.
+- Riepilogo paghe ultimi 30 giorni visibile in dashboard.
+- Esporta CSV mensile con ore lavorate, paga oraria, straordinari, penalità e totale.
+- Evidenzia penalità su ritardi/uscite anticipate e straordinari su uscita oltre orario.
